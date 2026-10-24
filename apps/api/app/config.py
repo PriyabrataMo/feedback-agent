@@ -35,6 +35,10 @@ class Settings:
     # "local" (dev disk) or "s3" (managed bucket; BYOB projects always use S3).
     storage_backend: str = "local"
     s3: S3Config = field(default_factory=S3Config)
+    # Waitlist: salt for the stored IP hash (set a real one in production) and the bearer token that
+    # unlocks GET /admin/waitlist[.csv]. No token = those endpoints are disabled.
+    waitlist_ip_salt: str = "dev-only-waitlist-salt"
+    waitlist_admin_token: str | None = None
 
     @property
     def is_production(self) -> bool:
@@ -52,6 +56,8 @@ class Settings:
             realtime_model=os.environ.get("REALTIME_MODEL", "gpt-realtime"),
             realtime_voice=os.environ.get("REALTIME_VOICE", "marin"),
             storage_backend=(os.environ.get("STORAGE_BACKEND") or "local").strip().lower(),
+            waitlist_ip_salt=os.environ.get("WAITLIST_IP_SALT") or "dev-only-waitlist-salt",
+            waitlist_admin_token=(os.environ.get("WAITLIST_ADMIN_TOKEN") or "").strip() or None,
             s3=S3Config(
                 bucket=os.environ.get("S3_BUCKET") or None,
                 region=os.environ.get("S3_REGION") or None,

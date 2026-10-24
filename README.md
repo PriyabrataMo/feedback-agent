@@ -1,8 +1,8 @@
-# Feedback Agent
+# Showbug
 
-An SDK/JS snippet any SaaS can embed. Adds a "feedback agent" button; a voice AI agent talks to the user while screen + mic are captured, the recording goes to S3, and a dev-ready ticket is created in the company's tracker.
+An SDK/JS snippet any SaaS can embed. Adds a "Showbug" button; a voice AI agent talks to the user while screen + mic are captured, the recording goes to S3, and a dev-ready ticket is created in the company's tracker.
 
-**Status:** slice 1 built (widget, capture, realtime agent adapter, chunked upload, session record, basic dashboard). Backend is Python FastAPI (`apps/api`); Next.js is only the dashboard/demo. Worker/tickets, Postgres and S3 not built yet. (Last updated 2026-10-24)
+**Status:** slice 1 built (widget, capture, realtime agent adapter, chunked upload, session record, basic dashboard). Backend is Python FastAPI (`apps/api`); Next.js is only the dashboard/demo. Worker/tickets, Postgres and S3 not built yet. Product renamed from "Feedback Agent" to **Showbug** on 2026-10-25 (domain showbugai.com; npm scope `@showbug/sdk`; the SDK global is now `window.Showbug`). The GitHub repo and local folder are still named `feedback-agent`. (Last updated 2026-10-25)
 
 ## Run it
 ```
@@ -16,6 +16,7 @@ bun run test:api             # pytest acceptance suite for the SDK contract
 - `/demo` is a fake customer app with the SDK embedded (`data-api` points it at the API). `/dashboard` lists sessions.
 - Without `OPENAI_API_KEY` in `apps/api/.env` the agent is a mock (greets via speech synthesis; click Done to end). With a key it uses OpenAI Realtime (`REALTIME_MODEL`, `REALTIME_VOICE` optional).
 - Dev data lives in `apps/api/.data/` (gitignored): `sessions.db` (sqlite) and `objects/`.
+- Naming: prose brand is "Showbug"; identifiers/slugs are `showbug` (workspace `showbug`, package `@showbug/sdk`, Python project `showbug-api`, logger `showbug_api`, S3 key prefix example `showbug`). No env var names embed the old name, so none changed. The wire contract (routes, `X-Feedback-*` webhook headers) is unchanged.
 - Dev project: public key `pk_dev_demo`, allowed origins `http://localhost:3000` and `127.0.0.1:3000` (`apps/api/app/projects.py`).
 - The SDK talks to the API origin set by `data-api` on the loader script tag (defaults to the script's own origin).
 - Next.js here is v16 with Cache Components; read `apps/web/node_modules/next/dist/docs/` before changing routing/caching.

@@ -73,7 +73,7 @@ def build_draft(
         text = "\n".join(f'{c["selector"]}  "{c["text"]}"' for c in facts.clicks)
         out += ["## Last clicks before the report", fenced(text, 1500), ""]
 
-    out += ["---", f"_Created automatically by Feedback Agent ({summary.source} summary)._"]
+    out += ["---", f"_Created automatically by Showbug ({summary.source} summary)._"]
 
     return TicketDraft(
         project_id=project_id,

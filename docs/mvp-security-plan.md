@@ -1,4 +1,4 @@
-# Feedback Agent: MVP and Security Plan
+# Showbug: MVP and Security Plan
 
 **Status:** Recommended starting plan, 2026-10-24
 **Goal:** Validate that a live AI interviewer produces bug reports developers can act on without another conversation with the reporter.

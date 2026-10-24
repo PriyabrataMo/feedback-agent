@@ -12,3 +12,4 @@ next-env.d.ts
 .DS_Store
 # Built SDK bundle (run `bun run build:sdk`)
 apps/web/public/sdk/
+.vercel/

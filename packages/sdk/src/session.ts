@@ -207,7 +207,7 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
 
   function end(reason: Parameters<SessionHandle["end"]>[0]): Promise<void> {
     if (endPromise) return endPromise;
-    console.debug(`[feedback-agent] ending session ${sessionId}: ${reason} after ${Date.now() - startedAt}ms`);
+    console.debug(`[showbug] ending session ${sessionId}: ${reason} after ${Date.now() - startedAt}ms`);
     endPromise = (async () => {
       onStatus("uploading");
       clearTimeout(capTimer);

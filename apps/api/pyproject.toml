@@ -1,7 +1,7 @@
 [project]
-name = "feedback-api"
+name = "showbug-api"
 version = "0.1.0"
-description = "Feedback Agent backend (FastAPI): SDK ingest API, storage presigning, realtime session minting, dashboard data."
+description = "Showbug backend (FastAPI): SDK ingest API, storage presigning, realtime session minting, dashboard data."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

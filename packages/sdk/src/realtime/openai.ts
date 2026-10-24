@@ -46,13 +46,13 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers, i
         break;
       case "response.done": {
         if (ev.response?.usage) {
-          console.debug("[feedback-agent] response usage", JSON.stringify(ev.response.usage));
+          console.debug("[showbug] response usage", JSON.stringify(ev.response.usage));
           handlers.onUsage(ev.response.usage);
         }
         const items: any[] = ev.response?.output ?? [];
         if (items.some((i) => i.type === "function_call" && i.name === "end_session")) {
           // Generation finishes before playback does; end once the audio buffer drains (or on timeout).
-          console.debug("[feedback-agent] model called end_session");
+          console.debug("[showbug] model called end_session");
           endPending = true;
           setTimeout(requestEnd, END_FALLBACK_MS);
         }
@@ -62,7 +62,7 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers, i
         if (endPending) requestEnd();
         break;
       case "error":
-        console.debug("[feedback-agent] realtime error event", JSON.stringify(ev.error));
+        console.debug("[showbug] realtime error event", JSON.stringify(ev.error));
         handlers.onError(new Error(ev.error?.message ?? "realtime error"));
         break;
     }
@@ -95,9 +95,9 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers, i
   const first = await initialFrame;
   if (first) {
     sendFrame(first);
-    console.debug(`[feedback-agent] initial frame sent (${Math.round(first.length / 1024)} KB) before greeting`);
+    console.debug(`[showbug] initial frame sent (${Math.round(first.length / 1024)} KB) before greeting`);
   } else {
-    console.debug("[feedback-agent] no initial frame available; greeting without screen");
+    console.debug("[showbug] no initial frame available; greeting without screen");
   }
   // Make the agent speak first.
   send({ type: "response.create" });

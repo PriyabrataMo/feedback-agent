@@ -2,6 +2,12 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Renamed the product to Showbug
+- Decision: "Feedback Agent" (a placeholder) becomes **Showbug**; domain `showbugai.com` is bought. *Why:* short and brandable, "show the bug" works as a verb, and it matches the core idea of the user showing their screen and talking through the problem.
+- Renamed: README title/status, root workspace (`showbug`) and `@showbug/sdk` (build filter), `apps/api` Python project (`showbug-api`), FastAPI title, logger names (`showbug_api*`), SDK global (`window.Showbug`) and `[showbug]` console prefixes, ticket footer ("Created automatically by Showbug"), realtime agent prompt, S3 example/test key prefix and role names (`showbug`, `ShowbugAccess`, `showbug-api`, `showbug-media`) in docs and tests, `docs/mvp-security-plan.md` title. The SDK bundle was rebuilt. No env var or storage default embedded the old name, so no fallbacks were needed.
+- Deliberately left: GitHub repo name and local folder (`feedback-agent`), git history, `docs/idea.md` and older journal entries (historical), generic "feedback" wording (ticket title prefix `[Feedback]`, the `X-Feedback-*` webhook headers, which are wire contract; consider renaming before any customer integrates).
+- Manual follow-ups: rename the GitHub repo, create real S3 buckets/IAM roles under the new names if any were already provisioned, and point `showbugai.com` DNS when deploying.
+
 ## 2026-10-24 — Unified Python and Next.js quality gates
 - Added Ruff formatting/linting, mypy, Prettier, stricter ESLint scripts, EditorConfig, VS Code recommendations, staged-file linting, and Conventional Commit validation, based on the `ncert-helper-agent` setup.
 - A root Husky hook coordinates Python `pre-commit` and frontend `lint-staged` checks. *Why:* this repository is one monorepo, unlike the reference project's separate backend/frontend Git repositories, so two independent hook managers would overwrite each other's Git hooks.
