@@ -175,7 +175,6 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
   // ---- transport ----
   const syncVideo = useCallback((ms: number, play: boolean | null) => {
     const v = videoRef.current;
-    console.log('DBG syncVideo', ms, play, fixingVideoRef.current);
     if (!v) return;
     if (fixingVideoRef.current) {
       // Duration probe in progress: remember the wish, apply it when the probe finishes.

@@ -68,3 +68,20 @@ def test_events_404_in_production(tmp_path):
         real = c.post("/api/v1/sessions", headers=H, json={}).json()["sessionId"]
     with TestClient(create_app(Settings(data_dir=tmp_path, environment="production"))) as c:
         assert c.get(f"/api/v1/admin/sessions/{real}/events").status_code == 404
+
+
+def test_media_supports_byte_ranges(client, sid):
+    import asyncio
+
+    prefix = client.app.state.store.get(sid).prefix
+    store = client.app.state.local_storage
+    asyncio.run(store.put_object(f"{prefix}/media/000000.webm", b"0123456789", "video/webm"))
+    asyncio.run(store.put_object(f"{prefix}/media/000001.webm", b"ABCDEFGHIJ", "video/webm"))
+    url = f"/api/v1/sessions/{sid}/media"
+    full = client.get(url)
+    assert full.status_code == 200 and full.content == b"0123456789ABCDEFGHIJ" and full.headers["accept-ranges"] == "bytes"
+    part = client.get(url, headers={"Range": "bytes=8-11"})
+    assert part.status_code == 206 and part.content == b"89AB" and part.headers["content-range"] == "bytes 8-11/20"
+    assert client.get(url, headers={"Range": "bytes=15-"}).content == b"FGHIJ"
+    assert client.get(url, headers={"Range": "bytes=-3"}).content == b"HIJ"
+    assert client.get(url, headers={"Range": "bytes=99-"}).status_code == 416

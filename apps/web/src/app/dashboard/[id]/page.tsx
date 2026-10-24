@@ -107,7 +107,7 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-6 md:p-10">
+    <main className="mx-auto w-full max-w-6xl min-w-0 space-y-4 p-6 md:p-10">
       <Link className="text-sm underline" href="/dashboard">
         ← All sessions
       </Link>
