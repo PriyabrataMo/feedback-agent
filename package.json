@@ -1,0 +1,14 @@
+{
+  "name": "feedback-agent",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter web dev",
+    "build:sdk": "bun run --filter @feedback-agent/sdk build",
+    "dev:api": "cd apps/api && uv run uvicorn app.main:create_app --factory --reload --port 8000",
+    "test:api": "cd apps/api && uv run pytest -q"
+  }
+}

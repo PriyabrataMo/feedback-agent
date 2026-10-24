@@ -1,0 +1,25 @@
+[project]
+name = "feedback-api"
+version = "0.1.0"
+description = "Feedback Agent backend (FastAPI): SDK ingest API, storage presigning, realtime session minting, dashboard data."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "boto3>=1.43.118",
+]
+
+[dependency-groups]
+dev = [
+    "moto>=5.2.4",
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.uv]
+package = false

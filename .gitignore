@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+__pycache__/
+.pytest_cache/
+.next/
+.data/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+# Built SDK bundle (run `bun run build:sdk`)
+apps/web/public/sdk/

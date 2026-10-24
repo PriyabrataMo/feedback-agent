@@ -1,0 +1,17 @@
+{
+  "name": "@feedback-agent/sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/loader.ts src/session.ts --outdir ../../apps/web/public/sdk --format esm --splitting --minify --target browser",
+    "dev": "bun build src/loader.ts src/session.ts --outdir ../../apps/web/public/sdk --format esm --splitting --target browser --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "rrweb": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
