@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { WaitlistForm } from "@/components/landing/waitlist-form";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const steps = [
   {
@@ -88,6 +89,38 @@ const faqs = [
     a: "We store your email and use it to tell you when early access opens.",
   },
 ];
+
+// Structured data for search engines. The FAQ entries are the same text rendered on the page.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon.svg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: "en",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE_URL}/#faq`,
+      mainEntity: faqs.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
 
 function Mark({ className }: { className?: string }) {
   return (
@@ -184,6 +217,13 @@ function ExampleTicket() {
 export default function Home() {
   return (
     <div className="sb-page min-h-screen bg-sb-paper text-sb-ink">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          // "<" is escaped so FAQ text can never close the script tag.
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-sb-ink focus:px-4 focus:py-2 focus:text-sb-paper"

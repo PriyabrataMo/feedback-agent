@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,26 +19,40 @@ const display = Bricolage_Grotesque({
   axes: ["opsz", "wdth"],
 });
 
-const siteTitle = "Showbug: show the bug, skip the back-and-forth";
-const siteDescription =
-  "Showbug is an embeddable button. Your user talks to a voice AI agent while their screen and mic are captured, and your developers get a ticket with the recording attached. Join the waitlist.";
-
 export const metadata: Metadata = {
-  metadataBase: new URL("https://showbugai.com"),
-  title: { default: siteTitle, template: "%s · Showbug" },
-  description: siteDescription,
-  applicationName: "Showbug",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "bug reporting tool",
+    "voice bug report",
+    "screen recording bug report",
+    "user feedback widget",
+    "AI bug ticket",
+    "session replay",
+    "Jira ticket automation",
+    "Linear ticket automation",
+  ],
+  category: "technology",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   openGraph: {
     type: "website",
-    siteName: "Showbug",
+    siteName: SITE_NAME,
     url: "/",
-    title: siteTitle,
-    description: siteDescription,
+    locale: "en_US",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: siteTitle,
-    description: siteDescription,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 
