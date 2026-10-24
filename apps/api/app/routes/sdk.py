@@ -1,9 +1,10 @@
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Request
 
-from ..http import ApiError, as_int, authenticate_sdk, jsend, read_json
+from ..http import ApiError, as_int, authenticate_sdk, jsend, parse_json, read_body, read_json
 from ..realtime import AGENT_INSTRUCTIONS
 from ..sessions import Session, new_session_id
 from ..storage import storage_for
@@ -14,6 +15,13 @@ router = APIRouter(prefix="/api/v1/sessions")
 GRACE = timedelta(seconds=60)
 MAX_EVENTS_BODY_BYTES = 1_000_000
 MAX_SEQ = 100_000
+
+
+_quota_locks: dict[str, asyncio.Lock] = {}
+
+
+def _quota_lock(project_id: str) -> asyncio.Lock:
+    return _quota_locks.setdefault(project_id, asyncio.Lock())
 
 
 def _clip(value: object, n: int) -> list:
@@ -53,27 +61,30 @@ async def create_session(request: Request):
     project, origin = auth.project, auth.origin
     state = request.app.state
 
-    if state.store.recent_count(project.id, timedelta(hours=1)) >= project.max_sessions_per_hour:
-        raise ApiError(429, "rate_limited", origin)
-
     body = await read_json(request)
     session_id = new_session_id()
+
+    # Reserve the quota slot (a row) before the slow provider call, under a lock, so concurrent
+    # creates can't all pass the check. A provider failure releases the slot.
+    async with _quota_lock(project.id):
+        if state.store.recent_count(project.id, timedelta(hours=1)) >= project.max_sessions_per_hour:
+            raise ApiError(429, "rate_limited", origin)
+        state.store.create(
+            id=session_id,
+            project_id=project.id,
+            url=str(body.get("url") or "")[:2048],
+            user_agent=request.headers.get("user-agent", "")[:512],
+            end_user=_clean_user(body.get("user")),
+            realtime_provider=state.realtime.name,
+            prefix=f"{project.id}/{session_id}",
+        )
 
     try:
         client = await state.realtime.create_client_session(instructions=AGENT_INSTRUCTIONS)
     except Exception:  # noqa: BLE001 - provider failure must not leak details to the browser
         request.app.state.log.exception("realtime provider failed")
+        state.store.delete(session_id)
         raise ApiError(502, "realtime_unavailable", origin) from None
-
-    state.store.create(
-        id=session_id,
-        project_id=project.id,
-        url=str(body.get("url") or "")[:2048],
-        user_agent=request.headers.get("user-agent", "")[:512],
-        end_user=_clean_user(body.get("user")),
-        realtime_provider=client.provider,
-        prefix=f"{project.id}/{session_id}",
-    )
     return jsend(
         {"sessionId": session_id, "maxSessionSeconds": project.max_session_seconds, "realtime": client.to_api()},
         201,
@@ -96,12 +107,14 @@ async def upload_url(session_id: str, request: Request):
     if seq is None or not 0 <= seq <= MAX_SEQ:
         raise ApiError(400, "bad_seq", origin)
 
-    content_type = body.get("contentType") if isinstance(body.get("contentType"), str) else None
-    ext = "mp4" if content_type and "mp4" in content_type else "webm"
+    # Never sign a client-chosen type (a text/html object would be stored XSS on the bucket origin).
+    requested = body.get("contentType") if isinstance(body.get("contentType"), str) else ""
+    ext = "mp4" if "mp4" in requested else "webm"
+    content_type = f"video/{ext}"
     # One object per MediaRecorder chunk (avoids S3's 5 MB multipart minimum; the worker stitches them).
     key = f"{session.prefix}/media/{seq:06d}.{ext}"
     storage = storage_for(request.app.state.local_storage, project.id)
-    url = await storage.presign_put(key, content_type=content_type or "video/webm", expires_in_sec=300)
+    url = await storage.presign_put(key, content_type=content_type, expires_in_sec=300)
     return jsend({"url": url, "key": key}, 200, origin)
 
 
@@ -111,11 +124,9 @@ async def ingest_events(session_id: str, request: Request):
     project, origin = auth.project, auth.origin
     session = _owned_session(request, session_id, project.id, origin)
 
-    raw = await request.body()
-    if len(raw) > MAX_EVENTS_BODY_BYTES:
-        raise ApiError(413, "too_large", origin)
+    raw = await read_body(request, MAX_EVENTS_BODY_BYTES)
     try:
-        parsed = json.loads(raw)
+        parsed = parse_json(raw)
     except ValueError:
         raise ApiError(400, "bad_json", origin) from None
 
@@ -125,7 +136,7 @@ async def ingest_events(session_id: str, request: Request):
         raise ApiError(400, "bad_request", origin)
 
     # rrweb events stored as NDJSON segments; Postgres will only hold pointers.
-    ndjson = "\n".join(json.dumps(e, separators=(",", ":"), ensure_ascii=False) for e in events)
+    ndjson = "\n".join(json.dumps(e, separators=(",", ":")) for e in events)  # ASCII-escaped: lone surrogates are safe
     key = f"{session.prefix}/events/{seq:06d}.ndjson"
     storage = storage_for(request.app.state.local_storage, project.id)
     await storage.put_object(key, ndjson.encode(), "application/x-ndjson")
@@ -154,6 +165,7 @@ async def end_session(session_id: str, request: Request):
             "consoleErrors": _clip(raw_ctx.get("consoleErrors"), 50),
             "failedRequests": _clip(raw_ctx.get("failedRequests"), 50),
             "clicks": _clip(raw_ctx.get("clicks"), 10),
+            "navigations": _clean_navigations(raw_ctx.get("navigations")),
         }
         if isinstance(raw_ctx, dict)
         else None
@@ -162,6 +174,22 @@ async def end_session(session_id: str, request: Request):
     request.app.state.store.end(session_id, transcript=transcript, context=context, usage=clean_usage(body.get("usage")))
     request.app.state.worker.enqueue(session_id)  # never raises; ticket failures don't affect this response
     return jsend({"ok": True}, 200, origin)
+
+
+def _clean_navigations(value: object) -> list[dict]:
+    """SPA route changes from the SDK (already URL-masked client-side); the client is untrusted, so re-shape and clip."""
+    out = []
+    for n in _clip(value, 30):
+        if isinstance(n, dict):
+            out.append(
+                {
+                    "url": str(n.get("url") or "")[:2048],
+                    "from": str(n.get("from") or "")[:2048],
+                    "title": str(n.get("title") or "")[:300],
+                    "at": _number(n.get("at")),
+                }
+            )
+    return out
 
 
 def _number(value: object) -> float | int:

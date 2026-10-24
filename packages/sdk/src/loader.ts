@@ -54,7 +54,7 @@ if (!publicKey || !scriptUrl) {
     <div class="panel" hidden>
       <div class="intro">
         <h4>Tell us what went wrong</h4>
-        <p class="consent">You'll be asked to share this tab and your microphone. A voice assistant will ask a few questions, and the session is recorded so the team can fix the problem. Fields marked private are hidden.</p>
+        <p class="consent">You'll be asked to share this tab and your microphone. A voice assistant (powered by an AI provider) will ask a few questions. Your screen video, audio and a replay of the page are recorded so the team can fix the problem. Fields marked private are hidden from the replay only, not from the video.</p>
         <div class="row"><button class="primary start">Start</button><button class="ghost cancel">Cancel</button></div>
       </div>
       <div class="live" hidden>
@@ -108,7 +108,7 @@ if (!publicKey || !scriptUrl) {
 
   $<HTMLButtonElement>(".start").addEventListener("click", async () => {
     // getDisplayMedia needs the click's transient user activation, so it must be the first await.
-    let screen: MediaStream;
+    let screen: MediaStream | undefined;
     let mic: MediaStream;
     try {
       screen = await navigator.mediaDevices.getDisplayMedia({
@@ -118,6 +118,14 @@ if (!publicKey || !scriptUrl) {
       } as DisplayMediaStreamOptions);
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
     } catch {
+      // If the mic was refused after the screen was granted, don't leave "Sharing this tab" running.
+      screen?.getTracks().forEach((t) => t.stop());
+      reset();
+      return;
+    }
+    // Hints only: a window/whole-screen share can't be covered by our DOM masking, so require a tab.
+    if (screen.getVideoTracks()[0]?.getSettings().displaySurface !== undefined && screen.getVideoTracks()[0].getSettings().displaySurface !== "browser") {
+      [...screen.getTracks(), ...mic.getTracks()].forEach((t) => t.stop());
       reset();
       return;
     }

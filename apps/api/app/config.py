@@ -38,7 +38,8 @@ class Settings:
 
     @property
     def is_production(self) -> bool:
-        return self.environment == "production"
+        """True for anything but an explicit development/test env, so a typo like "prod" fails closed."""
+        return self.environment.strip().lower() not in ("development", "test")
 
     @classmethod
     def from_env(cls) -> "Settings":

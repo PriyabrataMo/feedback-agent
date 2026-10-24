@@ -39,4 +39,6 @@ class ClientSession:
 
 
 class RealtimeProvider(Protocol):
+    name: str
+
     async def create_client_session(self, *, instructions: str) -> ClientSession: ...

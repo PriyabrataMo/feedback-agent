@@ -2,6 +2,12 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-24 — Ticket pipeline, security review fixes, replay player
+- Ticket worker + Linear/webhook sinks landed (docs/tickets.md); verified only against mocks, not real Linear/OpenAI. SDK `navigations` were being dropped by `/end`; fixed (cap 30, re-shaped server-side).
+- An adversarial review (headless Chrome + ASGI probes) found issues; **fixed now:** env check fails closed (anything but development/test hides admin + storage routes); ephemeral realtime token expires after 60s; session quota is atomic (slot reserved under a per-project lock before the provider call); upload content-type forced to video/webm|mp4; streamed body-size limits, NaN/deep-nesting/lone-surrogate no longer 500; SDK stops screen tracks when the mic is refused and rejects non-tab shares; consent copy now says private fields are hidden from the replay only.
+- **Still open (from the review):** per-IP rate limits and a bootstrap token (the Origin allow-list only stops other browsers); server-side session-length enforcement and per-session chunk/byte caps; S3 presigned PUT has no size limit (use presigned POST with content-length-range); 2nd `/end` overwrites the first; SDK Done/Cancel not wired until session start resolves, fetches have no timeout, no `pagehide` end beacon or abandoned-session sweeper; URL query strings and console args are stored unmasked; screen video and model screenshots are unmasked (P0 privacy, see mvp-security-plan.md); replay must run in a sandboxed iframe (attacker-authored rrweb events); dev storage secret still has a default; `/docs` is public in dev; uvicorn logs signed URLs; rrweb is `latest` in package.json.
+- Collaborator invite for `shubhamku044` is sent (write access), pending acceptance.
+
 ## 2026-10-24 — MVP and security review
 - Added the consolidated recommendation to `docs/mvp-security-plan.md`.
 - Recommended narrowing the MVP to one measurable outcome: a live interviewer produces an actionable draft report without developer follow-up. *Why:* recording, AI summaries, and agent-ready context are increasingly commodity features; interactive clarification is the product hypothesis that still needs validation.

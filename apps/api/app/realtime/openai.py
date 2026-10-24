@@ -6,6 +6,8 @@ from . import ClientSession
 
 
 class OpenAIProvider:
+    name = "openai"
+
     def __init__(self, api_key: str, model: str, voice: str, client: httpx.AsyncClient):
         self._api_key, self._model, self._voice, self._client = api_key, model, voice, client
 
@@ -14,6 +16,8 @@ class OpenAIProvider:
             "https://api.openai.com/v1/realtime/client_secrets",
             headers={"Authorization": f"Bearer {self._api_key}"},
             json={
+                # The token only has to start the call; a short expiry limits reuse by a tampered client.
+                "expires_after": {"anchor": "created_at", "seconds": 60},
                 "session": {
                     "type": "realtime",
                     "model": self._model,

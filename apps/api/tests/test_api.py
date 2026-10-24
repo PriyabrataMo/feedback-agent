@@ -159,3 +159,64 @@ def test_store_persists(tmp_path):
     s = SessionStore(str(tmp_path / "x.db"))
     s.create(id="ses_1", project_id="p", url="u", user_agent="ua", end_user=None, realtime_provider="mock", prefix="p/ses_1")
     assert SessionStore(str(tmp_path / "x.db")).get("ses_1").status == "active"
+
+
+def test_end_keeps_navigations(client, session_id):
+    navs = [{"url": f"http://localhost:3000/p{i}", "from": "/", "title": "T", "at": i, "evil": "x"} for i in range(40)]
+    r = client.post(
+        f"/api/v1/sessions/{session_id}/end",
+        headers=H,
+        json={"context": {"consoleErrors": [], "failedRequests": [], "clicks": [], "navigations": ["junk"] + navs}},
+    )
+    assert r.status_code == 200
+    saved = client.get(f"/api/v1/admin/sessions/{session_id}").json()["context"]["navigations"]
+    assert len(saved) == 30 and saved[-1]["url"].endswith("/p39") and set(saved[0]) == {"url", "from", "title", "at"}
+
+
+@pytest.mark.parametrize("env", ["production", "Production", "prod", "staging", "PRODUCTION "])
+def test_dev_routes_fail_closed_outside_development(tmp_path, env):
+    with TestClient(create_app(Settings(data_dir=tmp_path, environment=env))) as c:
+        assert c.get("/api/v1/admin/sessions").status_code == 404
+
+
+def test_upload_url_ignores_client_content_type(client, session_id):
+    r = client.post(
+        f"/api/v1/sessions/{session_id}/upload-url", headers=H, json={"seq": 0, "contentType": "text/html"}
+    )
+    assert r.status_code == 200
+    assert r.json()["key"].endswith(".webm")
+    assert "text%2Fhtml" not in r.json()["url"] and "text/html" not in r.json()["url"]
+
+
+def test_oversized_and_malformed_bodies(client, session_id):
+    url = f"/api/v1/sessions/{session_id}/events"
+    assert client.post(url, headers=H, content=b"x" * 1_000_001).status_code == 413
+    assert client.post(url, headers=H, content=b"[" * 100_000).status_code == 400
+    assert client.post(url, headers=H, content=b'{"seq":0,"events":[{"x":NaN}]}').status_code == 400
+    assert client.post(url, headers=H, content=b'{"seq":0,"events":[{"t":"\\ud800"}]}').status_code == 200
+
+
+def test_session_quota_is_atomic(tmp_path):
+    import asyncio
+
+    import httpx
+
+    from app.realtime.mock import MockProvider
+
+    class SlowProvider(MockProvider):
+        async def create_client_session(self, *, instructions):
+            await asyncio.sleep(0.05)
+            return await super().create_client_session(instructions=instructions)
+
+    registry = ProjectRegistry([Project("proj_q", "pk_q", ("http://localhost:3000",), 180, 5)])
+    app = create_app(Settings(data_dir=tmp_path), projects=registry, realtime=SlowProvider())
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            rs = await asyncio.gather(
+                *[c.post("/api/v1/sessions", headers={"X-Public-Key": "pk_q", **OK}, json={}) for _ in range(20)]
+            )
+            return [r.status_code for r in rs]
+
+    codes = asyncio.run(go())
+    assert codes.count(201) == 5 and codes.count(429) == 15

@@ -22,6 +22,7 @@ import {
 
 type Props = {
   sessionId: string;
+  startedAt: string;
   eventsUrl: string;
   mediaUrl: string | null;
   transcript: TranscriptSegment[];
@@ -43,7 +44,7 @@ const KIND_META: Record<TimelineKind, { label: string; icon: typeof Globe; tone:
   "failed-request": { label: "Failed request", icon: AlertTriangle, tone: "text-amber-700 dark:text-amber-400" },
 };
 
-export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, context }: Props) {
+export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, transcript, context }: Props) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [events, setEvents] = useState<ReplayEvent[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -60,6 +61,8 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
   const videoRef = useRef<HTMLVideoElement>(null);
   const playingRef = useRef(false);
   const speedRef = useRef(1);
+  const fixingVideoRef = useRef(false);
+  const pendingVideoRef = useRef<number | null>(null);
 
   // ---- fetch events (browser -> API, dev-only CORS reflected by the endpoint). The page keys this
   // component by session id, so initial state "loading" is the only reset needed. ----
@@ -79,7 +82,8 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
     return () => ctrl.abort();
   }, [eventsUrl]);
 
-  const t0 = events.length > 0 ? Math.min(...events.map((e) => e.timestamp)) : 0;
+  // Replay time 0 is the first event; without events fall back to the session start (same browser clock in practice).
+  const t0 = events.length > 0 ? Math.min(...events.map((e) => e.timestamp)) : Date.parse(startedAt) || 0;
   const timeline = useMemo(() => buildTimeline(events, context, t0), [events, context, t0]);
 
   // ---- mount the Replayer once events are ready ----
@@ -171,7 +175,14 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
   // ---- transport ----
   const syncVideo = useCallback((ms: number, play: boolean | null) => {
     const v = videoRef.current;
+    console.log('DBG syncVideo', ms, play, fixingVideoRef.current);
     if (!v) return;
+    if (fixingVideoRef.current) {
+      // Duration probe in progress: remember the wish, apply it when the probe finishes.
+      if (Number.isFinite(ms)) pendingVideoRef.current = ms / 1000;
+      if (play === true) void v.play().catch(() => undefined);
+      return;
+    }
     if (Number.isFinite(ms)) v.currentTime = ms / 1000;
     if (play === true) void v.play().catch(() => undefined);
     if (play === false) v.pause();
@@ -246,7 +257,7 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
   const onVideoSeeked = () => {
     const v = videoRef.current;
     const r = replayerRef.current;
-    if (!v || !r) return;
+    if (!v || !r || fixingVideoRef.current) return;
     const ms = v.currentTime * 1000;
     if (Math.abs(ms - r.getCurrentTime()) > 400) {
       if (playingRef.current) r.play(ms);
@@ -254,20 +265,37 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
       setCurrentMs(Math.round(ms));
     }
   };
-  const onVideoMetadata = () => {
+  const fixVideoDuration = useCallback(() => {
     // MediaRecorder WebM has no duration header: force the browser to compute it so seeking works.
     const v = videoRef.current;
-    if (v && v.duration === Infinity) {
-      v.currentTime = 1e101;
-      v.addEventListener(
-        "timeupdate",
-        () => {
-          v.currentTime = 0;
-        },
-        { once: true },
-      );
-    }
-  };
+    if (!v || v.duration !== Infinity || fixingVideoRef.current) return;
+    fixingVideoRef.current = true; // these seeks must not move the replay
+    pendingVideoRef.current = null;
+    const finish = () => {
+      clearTimeout(timer);
+      v.removeEventListener("seeked", onSeeked);
+      fixingVideoRef.current = false;
+    };
+    let target = 0;
+    const onSeeked = () => {
+      if (Math.abs(v.currentTime - target) < 0.5) finish(); // the restore seek, not the 1e101 probe
+    };
+    v.addEventListener("seeked", onSeeked);
+    v.addEventListener(
+      "durationchange",
+      () => {
+        target = pendingVideoRef.current ?? 0;
+        v.currentTime = target;
+      },
+      { once: true },
+    );
+    v.currentTime = 1e101;
+    const timer = setTimeout(finish, 3000); // never stay stuck if the browser skips an event
+  }, []);
+  // The server-rendered <video> may have loaded its metadata before hydration attached onLoadedMetadata.
+  useEffect(() => {
+    if (videoRef.current && videoRef.current.readyState >= 1) fixVideoDuration();
+  }, [fixVideoDuration, mediaUrl]);
 
   // ---- derived lists ----
   const transcriptOffsets = useMemo(() => transcript.map((t) => t.at), [transcript]);
@@ -376,7 +404,7 @@ export function SessionPlayback({ sessionId, eventsUrl, mediaUrl, transcript, co
                   className="w-full rounded-md border bg-black"
                   src={mediaUrl}
                   aria-label={`Screen recording of session ${sessionId}`}
-                  onLoadedMetadata={onVideoMetadata}
+                  onLoadedMetadata={fixVideoDuration}
                   onPlay={onVideoPlay}
                   onPause={onVideoPause}
                   onSeeked={onVideoSeeked}

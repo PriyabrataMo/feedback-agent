@@ -188,6 +188,11 @@ class SessionStore:
             )
         return session
 
+    def delete(self, id: str) -> None:
+        """Releases a reserved slot whose provider call failed."""
+        with self._lock, self._db:
+            self._db.execute("DELETE FROM sessions WHERE id = ?", (id,))
+
     def get(self, id: str) -> Session | None:
         with self._lock:
             row = self._db.execute("SELECT * FROM sessions WHERE id = ?", (id,)).fetchone()

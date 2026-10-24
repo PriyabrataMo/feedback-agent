@@ -9,6 +9,8 @@ class MockProvider:
     the Done button, which lets capture, upload and ticket plumbing be tested end to end without a key.
     """
 
+    name = "mock"
+
     async def create_client_session(self, *, instructions: str) -> ClientSession:
         return ClientSession(
             provider="mock",

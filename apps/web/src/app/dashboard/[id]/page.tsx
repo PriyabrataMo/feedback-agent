@@ -73,6 +73,7 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
       <SessionPlayback
         key={session.id}
         sessionId={session.id}
+        startedAt={session.startedAt}
         eventsUrl={eventsUrl(session.id)}
         mediaUrl={session.mediaChunks > 0 ? mediaUrl(session.id) : null}
         transcript={session.transcript}

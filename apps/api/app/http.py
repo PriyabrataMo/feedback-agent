@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from fastapi import Request
@@ -46,10 +47,39 @@ def authenticate_sdk(request: Request) -> Authed:
     return Authed(project, origin)
 
 
+MAX_JSON_BODY_BYTES = 256_000
+
+
+async def read_body(request: Request, limit: int) -> bytes:
+    """Reads the body but stops as soon as it exceeds `limit` (also covers chunked uploads with no Content-Length)."""
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > limit:
+        raise ApiError(413, "too_large", request.headers.get("origin"))
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise ApiError(413, "too_large", request.headers.get("origin"))
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _reject_constant(name: str):
+    raise ValueError(f"non-finite number {name}")
+
+
+def parse_json(raw: bytes):
+    """json.loads that also rejects NaN/Infinity and absurd nesting; raises ValueError for all bad input."""
+    try:
+        return json.loads(raw, parse_constant=_reject_constant)
+    except RecursionError:
+        raise ValueError("too deeply nested") from None
+
+
 async def read_json(request: Request) -> dict:
     """Lenient body parse: anything that isn't a JSON object becomes {} and fails field validation."""
     try:
-        body = await request.json()
+        body = parse_json(await read_body(request, MAX_JSON_BODY_BYTES))
     except ValueError:
         return {}
     return body if isinstance(body, dict) else {}
