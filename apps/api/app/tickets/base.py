@@ -101,6 +101,12 @@ async def retry_async(
                 raise
             delay = exc.retry_after if exc.retry_after is not None else base_delay * (2**attempt)
             await sleep(min(delay, max_delay) * (0.75 + random.random() * 0.5) if base_delay else 0)
-            if before_retry is not None and (found := await before_retry()) is not None:
-                return found
+            if before_retry is not None:
+                try:
+                    if (found := await before_retry()) is not None:
+                        return found
+                except TicketError as check_error:
+                    if check_error.auth:
+                        raise
+                    # The check itself failed; try the real op again (sinks keep that safe via deterministic ids).
     raise AssertionError("unreachable")  # pragma: no cover

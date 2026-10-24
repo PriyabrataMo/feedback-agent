@@ -14,6 +14,7 @@ from .realtime.openai import OpenAIProvider
 from .routes import admin, sdk, storage
 from .sessions import SessionStore
 from .storage import LocalStorage
+from .worker import TicketSettings, TicketWorker
 
 
 def create_app(
@@ -21,14 +22,22 @@ def create_app(
     *,
     projects: ProjectRegistry | None = None,
     realtime: RealtimeProvider | None = None,
+    ticket_settings: TicketSettings | None = None,
+    ticket_client: httpx.AsyncClient | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_env()
     http_client = httpx.AsyncClient(timeout=15)
+    # Separate client for Linear / webhooks / the summary LLM. Tests inject one on httpx.MockTransport.
+    ticket_http = ticket_client or httpx.AsyncClient(timeout=20)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        await app.state.worker.start()
         yield
+        await app.state.worker.stop()
         await http_client.aclose()
+        if ticket_client is None:
+            await ticket_http.aclose()
 
     app = FastAPI(title="Feedback Agent API", lifespan=lifespan)
     settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -38,6 +47,12 @@ def create_app(
     app.state.projects = projects or dev_registry()
     app.state.store = SessionStore(str(settings.data_dir / "sessions.db"))
     app.state.local_storage = LocalStorage(settings.data_dir / "objects", settings.dev_storage_secret)
+    app.state.worker = TicketWorker(
+        store=app.state.store,
+        projects=app.state.projects,
+        settings=ticket_settings or TicketSettings.from_env(openai_api_key=settings.openai_api_key),
+        client=ticket_http,
+    )
     if realtime is not None:
         app.state.realtime = realtime
     elif settings.openai_api_key:

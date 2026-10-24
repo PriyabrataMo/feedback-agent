@@ -16,7 +16,7 @@ import httpx
 
 from ..sessions import Session
 from ..tickets.base import SEVERITIES
-from ..tickets.sanitize import clean_block, clean_line, clean_url, defang_markdown
+from ..tickets.sanitize import clean_block, clean_line, clean_url
 from .settings import TicketSettings
 
 log = logging.getLogger("feedback_api.worker")
@@ -106,6 +106,8 @@ def _path(url: str) -> str:
 
 
 def _area(url: str) -> str:
+    if not url:
+        return "unknown"
     segment = next((s for s in _path(url).split("/") if s), "")
     return clean_line(segment, 60) or "unknown"
 
@@ -209,7 +211,7 @@ def parse_llm_output(content: object) -> Summary:
     if not isinstance(data, dict):
         raise ValueError("model output is not a JSON object")
     title = clean_line(data.get("title"), MAX_TITLE)
-    summary = defang_markdown(data.get("summary"), MAX_SUMMARY)
+    summary = clean_line(data.get("summary"), MAX_SUMMARY)
     steps = data.get("repro_steps")
     if not title or not summary or not isinstance(steps, list):
         raise ValueError("model output missing title/summary/repro_steps")
@@ -217,9 +219,9 @@ def parse_llm_output(content: object) -> Summary:
     return Summary(
         title=title,
         summary=summary,
-        repro_steps=[s for s in (defang_markdown(x, MAX_STEP) for x in steps[:MAX_STEPS]) if s],
+        repro_steps=[s for s in (clean_line(x, MAX_STEP) for x in steps[:MAX_STEPS]) if s],
         severity=severity if severity in SEVERITIES else "medium",
-        area=defang_markdown(data.get("area"), 60) or "unknown",
+        area=clean_line(data.get("area"), 60) or "unknown",
         source="llm",
     )
 

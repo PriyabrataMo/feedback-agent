@@ -40,7 +40,10 @@ def clean_url(value: object, max_len: int = 500) -> str:
         return ""
     if parts.scheme not in ("http", "https") or not parts.netloc or " " in text:
         return ""
-    return clean_line(urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, "")), max_len)
+    safe = urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))
+    # Percent-encode characters that could break out of markdown/HTML when the URL is printed bare.
+    safe = "".join(f"%{ord(c):02X}" if c in '<>"`[]{}|^\\' else c for c in safe)
+    return clean_line(safe, max_len)
 
 
 def defang_markdown(value: object, max_len: int) -> str:

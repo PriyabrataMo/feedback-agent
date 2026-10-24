@@ -160,7 +160,7 @@ async def end_session(session_id: str, request: Request):
     )
 
     request.app.state.store.end(session_id, transcript=transcript, context=context, usage=clean_usage(body.get("usage")))
-    # TODO(worker): enqueue session.ended -> summarize, dedupe, create ticket via TicketSink.
+    request.app.state.worker.enqueue(session_id)  # never raises; ticket failures don't affect this response
     return jsend({"ok": True}, 200, origin)
 
 

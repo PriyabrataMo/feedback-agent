@@ -34,6 +34,22 @@ Proposals only, not yet confirmed (see `architecture.md`):
 - Tenant-scoped S3 prefixes and queries from day one. *Why:* retrofitting isolation is painful.
 - Ticket quality is the product, not the recording. *Why:* recording widgets (Jam, Marker.io, Userback) are commodity.
 
+## 2026-10-24 (parallel agents) — Multi-page investigation, S3 adapter, SDK nav markers
+Five agents ran in parallel (session 75a4cade); this entry covers the ones finished so far. Tickets, replay player and the security review are logged when they land.
+
+**Multi-page sites (full report: `multipage-investigation.md`; tested in real Chrome, 3/3 runs):**
+- Today's in-page capture **dies on any full page load** (same- and cross-origin); nothing resumes.
+- A **popup on our origin** that owns tab capture, mic, recorder and the agent connection **survives the opener's navigations** (video followed the tab, no chunk gap, peer connection stayed up). `sessionStorage` carries the session id across same-origin loads; the popup re-supplies it by `postMessage` after a cross-origin hop.
+- Document Picture-in-Picture and a hidden iframe both die when the opener navigates (ruled out). Workers ruled out from docs only.
+- Gotchas: `window.open` must run inside the click handler (blocked after ~7 s); a customer COOP header severs `window.opener` (capture still works), so end the session only on the captured track's `ended` event; `window.open('', name)` opens a blank window if the popup is gone, so use probe/reply messages instead; closing the popup sends no goodbye, so abandoned sessions need server-side silence detection.
+- **Recommendation (proposal, not confirmed by user):** keep in-page capture as default, add `mode: "multipage"` using the popup controller (~1-1.5 weeks). Browser extension later for internal teams. Server needs heartbeat + abandoned sweeper, `page_view` events, per-page event keys, a collector token.
+- Unverified: real tab-picker UX, real speech/OpenAI peer connection (loopback used), Safari/Firefox, popup minimise throttling, mic permission persistence.
+
+**S3 adapter (`apps/api/app/storage/s3.py`, `docs/s3-storage.md`):** managed and BYOB (STS AssumeRole + ExternalId) modes, presigned PUT/GET, test-connection. 33 new tests with moto; **no real AWS tested**, IAM/trust policies in the doc are untested. Nothing passes a BYOB config yet (Project has no storage fields) and no route exposes test-connection.
+
+**SDK (`packages/sdk`):** SPA navigation markers (`nav.ts`; query strings and non-route hashes stripped; rrweb custom `navigation` events; click `url`). Screenshot path fixed: the first frame is now sent **before** the greeting. Live run: image tokens 323 per 768 px frame (was 0), greeting response 643 total tokens. Only the initial frame was exercised live. Greeting now waits up to 2.5 s for the first frame.
+- **Open bug:** `/end` clips context to three keys, so the API drops the SDK's new `navigations` list.
+
 ## 2026-10-24 (build, slice 2) — Backend rewritten in Python FastAPI
 User asked for the whole backend in FastAPI. Session 75a4cade. Code in `apps/api` (uv, Python 3.12+, FastAPI, httpx, stdlib sqlite3).
 

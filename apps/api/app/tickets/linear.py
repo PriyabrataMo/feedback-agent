@@ -65,7 +65,7 @@ class LinearSink:
             try:
                 return await self._create(issue_id, draft)
             except TicketError as exc:
-                if not exc.retryable:
+                if not exc.retryable and not exc.auth:
                     # e.g. "id already exists" after a lost response: if it's ours, we're done.
                     try:
                         if (existing := await self._lookup(issue_id)) is not None:
