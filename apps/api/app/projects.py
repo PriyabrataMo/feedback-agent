@@ -1,4 +1,17 @@
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class SinkConfig:
+    """
+    Where a project's tickets go. Holds no secrets: `secret_env` is the NAME of the environment
+    variable with the API key / signing secret (the Postgres version stores an encrypted-secret ref).
+    """
+
+    kind: str  # "linear" | "webhook"; see app/tickets/registry.py
+    options: dict = field(default_factory=dict)  # linear: team_id, label_ids; webhook: url
+    secret_env: str | None = None
 
 
 @dataclass(frozen=True)
@@ -10,6 +23,8 @@ class Project:
     max_session_seconds: int
     # Hard cap so an exposed public key can't burn the model budget.
     max_sessions_per_hour: int
+    # None = no tracker configured; sessions are recorded but no ticket is created.
+    ticket_sink: SinkConfig | None = None
 
 
 class ProjectRegistry:
@@ -28,6 +43,20 @@ class ProjectRegistry:
         return {o for p in self._projects for o in p.allowed_origins}
 
 
+def _dev_sink_from_env() -> SinkConfig | None:
+    """Dev convenience: pick the sink from env. LINEAR_API_KEY+LINEAR_TEAM_ID wins over TICKET_WEBHOOK_URL."""
+    if os.environ.get("LINEAR_API_KEY") and os.environ.get("LINEAR_TEAM_ID"):
+        labels = [x.strip() for x in os.environ.get("LINEAR_LABEL_IDS", "").split(",") if x.strip()]
+        return SinkConfig(
+            "linear",
+            {"team_id": os.environ["LINEAR_TEAM_ID"], "label_ids": labels},
+            secret_env="LINEAR_API_KEY",
+        )
+    if os.environ.get("TICKET_WEBHOOK_URL"):
+        return SinkConfig("webhook", {"url": os.environ["TICKET_WEBHOOK_URL"]}, secret_env="TICKET_WEBHOOK_SECRET")
+    return None
+
+
 def dev_registry() -> ProjectRegistry:
     return ProjectRegistry(
         [
@@ -37,6 +66,7 @@ def dev_registry() -> ProjectRegistry:
                 allowed_origins=("http://localhost:3000", "http://127.0.0.1:3000"),
                 max_session_seconds=180,
                 max_sessions_per_hour=30,
+                ticket_sink=_dev_sink_from_env(),
             )
         ]
     )

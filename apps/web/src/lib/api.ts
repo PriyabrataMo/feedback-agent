@@ -1,4 +1,4 @@
-/** Typed client for the FastAPI backend (apps/api). Server-side only; the browser just plays media. */
+/** Typed client for the FastAPI backend (apps/api). Reads run server-side; the browser fetches replay events and media. */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type TranscriptSegment = { role: "user" | "agent"; text: string; at: number };
@@ -15,8 +15,19 @@ export type Session = {
   endedAt: string | null;
   prefix: string;
   transcript: TranscriptSegment[];
-  context: { consoleErrors: unknown[]; failedRequests: unknown[]; clicks: unknown[] } | null;
+  context: {
+    consoleErrors: unknown[];
+    failedRequests: unknown[];
+    clicks: unknown[];
+    /** Added by the multi-page work; older sessions don't have it. */
+    navigations?: unknown[];
+  } | null;
   usage: Record<string, unknown> | null;
+  /** Ticket fields written by the worker; absent until it has run. */
+  summary?: string | null;
+  ticketUrl?: string | null;
+  ticketStatus?: string | null;
+  reproSteps?: unknown[] | null;
 };
 
 export type SessionDetail = Session & { mediaChunks: number; replaySegments: number };
@@ -37,3 +48,6 @@ export function getSession(id: string): Promise<SessionDetail | null> {
 }
 
 export const mediaUrl = (id: string) => `${API_URL}/api/v1/sessions/${encodeURIComponent(id)}/media`;
+
+/** Browser-side GET: the API reflects allow-listed project origins (dev-only admin route). */
+export const eventsUrl = (id: string) => `${API_URL}/api/v1/admin/sessions/${encodeURIComponent(id)}/events`;

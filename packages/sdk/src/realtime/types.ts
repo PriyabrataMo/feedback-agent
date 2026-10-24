@@ -21,4 +21,6 @@ export type RealtimeConnector = (
   session: ClientSessionInfo,
   mic: MediaStream,
   handlers: RealtimeHandlers,
+  /** First screen frame (JPEG data URL, or null if none became available in time); sent before the greeting. */
+  initialFrame: Promise<string | null>,
 ) => Promise<RealtimeClient>;

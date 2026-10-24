@@ -5,10 +5,12 @@ import threading
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 SessionStatus = Literal["active", "ended", "abandoned"]
+# pending: queued; creating: claimed by a worker; created/failed: terminal; skipped: project has no sink.
+TicketStatus = Literal["pending", "creating", "created", "failed", "skipped"]
 
 
 class Session(BaseModel):
@@ -31,6 +33,16 @@ class Session(BaseModel):
     context: dict | None
     # Summed provider token usage by modality, reported by the SDK at session end.
     usage: dict | None
+    # Ticket pipeline state (app/worker). All None until the session ends.
+    ticket_status: TicketStatus | None = None
+    ticket_url: str | None = None
+    ticket_external_id: str | None = None
+    # Short, secret-free reason for the last failure; shown on the dashboard.
+    ticket_error: str | None = None
+    summary: str | None = None
+    repro_steps: list[str] | None = None
+    # The full rendered draft, kept so a retry never re-bills the LLM. Internal: not in the API shape.
+    ticket_draft: dict | None = Field(default=None, exclude=True)
 
     def to_api(self) -> dict:
         return self.model_dump(by_alias=True)
@@ -64,6 +76,26 @@ CREATE INDEX IF NOT EXISTS sessions_project_started ON sessions (project_id, sta
 """
 
 
+# Columns added after the first release. Existing .data/sessions.db files get them via ALTER TABLE.
+_TICKET_COLUMNS = {
+    "ticket_status": "TEXT",
+    "ticket_url": "TEXT",
+    "ticket_external_id": "TEXT",
+    "ticket_error": "TEXT",
+    "summary": "TEXT",
+    "repro_steps": "TEXT",
+    "ticket_draft": "TEXT",
+}
+_TICKET_JSON = {"repro_steps", "ticket_draft"}
+
+
+def _migrate(db: sqlite3.Connection) -> None:
+    have = {row[1] for row in db.execute("PRAGMA table_info(sessions)")}
+    for name, sql_type in _TICKET_COLUMNS.items():  # names are constants above, never user input
+        if name not in have:
+            db.execute(f"ALTER TABLE sessions ADD COLUMN {name} {sql_type}")
+
+
 def _loads(value: str | None):
     return None if value is None else json.loads(value)
 
@@ -83,6 +115,13 @@ def _row_to_session(row: sqlite3.Row) -> Session:
         transcript=json.loads(row["transcript"]),
         context=_loads(row["context"]),
         usage=_loads(row["usage"]),
+        ticket_status=row["ticket_status"],
+        ticket_url=row["ticket_url"],
+        ticket_external_id=row["ticket_external_id"],
+        ticket_error=row["ticket_error"],
+        summary=row["summary"],
+        repro_steps=_loads(row["repro_steps"]),
+        ticket_draft=_loads(row["ticket_draft"]),
     )
 
 
@@ -98,6 +137,8 @@ class SessionStore:
         self._lock = threading.Lock()
         with self._lock:
             self._db.executescript(_SCHEMA)
+            with self._db:
+                _migrate(self._db)
 
     def create(
         self,
@@ -127,7 +168,8 @@ class SessionStore:
         )
         with self._lock, self._db:
             self._db.execute(
-                "INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO sessions (id, project_id, status, url, user_agent, end_user, realtime_provider,"
+                " started_at, ended_at, prefix, transcript, context, usage) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     session.id,
                     session.project_id,
@@ -178,3 +220,45 @@ class SessionStore:
                 ),
             )
         return self.get(id) if cur.rowcount else None
+
+    # --- ticket pipeline -------------------------------------------------------------------------
+
+    def mark_ticket_pending(self, id: str) -> bool:
+        """Queue a session for ticketing. A no-op (False) if a ticket is already queued, running or created."""
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "UPDATE sessions SET ticket_status='pending', ticket_error=NULL WHERE id=? AND status='ended'"
+                " AND (ticket_status IS NULL OR ticket_status IN ('failed','skipped'))",
+                (id,),
+            )
+        return cur.rowcount > 0
+
+    def claim_ticket(self, id: str) -> bool:
+        """Atomically move pending/failed -> creating. Exactly one caller wins, so a job never runs twice."""
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "UPDATE sessions SET ticket_status='creating', ticket_error=NULL WHERE id=?"
+                " AND ticket_status IN ('pending','failed')",
+                (id,),
+            )
+        return cur.rowcount > 0
+
+    def set_ticket(self, id: str, **fields: object) -> None:
+        unknown = set(fields) - set(_TICKET_COLUMNS)
+        if unknown:
+            raise ValueError(f"unknown ticket fields: {sorted(unknown)}")
+        if not fields:
+            return
+        values = [json.dumps(v) if k in _TICKET_JSON and v is not None else v for k, v in fields.items()]
+        assignments = ", ".join(f"{k}=?" for k in fields)  # keys validated against _TICKET_COLUMNS above
+        with self._lock, self._db:
+            self._db.execute(f"UPDATE sessions SET {assignments} WHERE id=?", (*values, id))
+
+    def requeue_interrupted_tickets(self) -> list[str]:
+        """After a restart: creating -> pending (the sink is idempotent), return ids that still need a ticket."""
+        with self._lock, self._db:
+            self._db.execute("UPDATE sessions SET ticket_status='pending' WHERE ticket_status='creating'")
+            rows = self._db.execute(
+                "SELECT id FROM sessions WHERE status='ended' AND ticket_status='pending' ORDER BY ended_at"
+            ).fetchall()
+        return [r["id"] for r in rows]

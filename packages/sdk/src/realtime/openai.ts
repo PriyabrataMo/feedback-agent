@@ -3,7 +3,7 @@ import type { RealtimeConnector } from "./types";
 /** Waits for the agent's closing line to finish playing before honouring end_session. */
 const END_FALLBACK_MS = 6000;
 
-export const connectOpenAI: RealtimeConnector = async (session, mic, handlers) => {
+export const connectOpenAI: RealtimeConnector = async (session, mic, handlers, initialFrame) => {
   const pc = new RTCPeerConnection();
 
   const audioEl = new Audio();
@@ -45,7 +45,10 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers) =
         if (ev.transcript?.trim()) handlers.onTranscript({ role: "agent", text: ev.transcript.trim() });
         break;
       case "response.done": {
-        if (ev.response?.usage) handlers.onUsage(ev.response.usage);
+        if (ev.response?.usage) {
+          console.debug("[feedback-agent] response usage", JSON.stringify(ev.response.usage));
+          handlers.onUsage(ev.response.usage);
+        }
         const items: any[] = ev.response?.output ?? [];
         if (items.some((i) => i.type === "function_call" && i.name === "end_session")) {
           // Generation finishes before playback does; end once the audio buffer drains (or on timeout).
@@ -59,6 +62,7 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers) =
         if (endPending) requestEnd();
         break;
       case "error":
+        console.debug("[feedback-agent] realtime error event", JSON.stringify(ev.error));
         handlers.onError(new Error(ev.error?.message ?? "realtime error"));
         break;
     }
@@ -80,16 +84,26 @@ export const connectOpenAI: RealtimeConnector = async (session, mic, handlers) =
   await pc.setRemoteDescription({ type: "answer", sdp: await res.text() });
   await opened;
 
+  const sendFrame = (dataUrl: string) =>
+    send({
+      type: "conversation.item.create",
+      item: { type: "message", role: "user", content: [{ type: "input_image", image_url: dataUrl }] },
+    });
+
+  // Put the first screen frame in the conversation before the agent speaks, so its greeting can already
+  // reference the page. The frame promise is bounded by the session (null on timeout).
+  const first = await initialFrame;
+  if (first) {
+    sendFrame(first);
+    console.debug(`[feedback-agent] initial frame sent (${Math.round(first.length / 1024)} KB) before greeting`);
+  } else {
+    console.debug("[feedback-agent] no initial frame available; greeting without screen");
+  }
   // Make the agent speak first.
   send({ type: "response.create" });
 
   return {
-    sendFrame(dataUrl) {
-      send({
-        type: "conversation.item.create",
-        item: { type: "message", role: "user", content: [{ type: "input_image", image_url: dataUrl }] },
-      });
-    },
+    sendFrame,
     close() {
       channel.close();
       pc.close();

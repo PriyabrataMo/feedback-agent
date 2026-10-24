@@ -2,12 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSession, mediaUrl } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { SessionPlayback } from "@/components/session-playback";
+import { normalizeSteps } from "@/components/session-playback/timeline";
+import { eventsUrl, getSession, mediaUrl } from "@/lib/api";
 
 async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getSession(id);
   if (!session) notFound();
+  const steps = normalizeSteps(session.reproSteps);
 
   return (
     <div className="space-y-6">
@@ -35,31 +39,45 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
         </CardContent>
       </Card>
 
-      {session.mediaChunks > 0 && (
+      {(session.summary || session.ticketUrl || session.ticketStatus || steps.length > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle>Recording</CardTitle>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              Ticket
+              {session.ticketStatus && <Badge variant="secondary">{session.ticketStatus}</Badge>}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <video controls className="w-full rounded" src={mediaUrl(session.id)} />
+          <CardContent className="space-y-3 text-sm">
+            {session.summary && <p>{session.summary}</p>}
+            {session.ticketUrl && (
+              <p>
+                <a className="underline" href={session.ticketUrl} target="_blank" rel="noreferrer noopener">
+                  {session.ticketUrl}
+                </a>
+              </p>
+            )}
+            {steps.length > 0 && (
+              <div>
+                <p className="mb-1 font-medium">Steps to reproduce</p>
+                <ol className="list-decimal space-y-1 pl-5">
+                  {steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transcript</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {session.transcript.length === 0 && <p className="text-muted-foreground">No transcript captured.</p>}
-          {session.transcript.map((t, i) => (
-            <p key={i}>
-              <strong>{t.role === "agent" ? "Agent" : "User"}</strong>{" "}
-              <span className="text-muted-foreground">{Math.round(t.at / 1000)}s</span> {t.text}
-            </p>
-          ))}
-        </CardContent>
-      </Card>
+      <SessionPlayback
+        key={session.id}
+        sessionId={session.id}
+        eventsUrl={eventsUrl(session.id)}
+        mediaUrl={session.mediaChunks > 0 ? mediaUrl(session.id) : null}
+        transcript={session.transcript}
+        context={session.context}
+      />
 
       <Card>
         <CardHeader>
@@ -88,7 +106,7 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-10">
+    <main className="mx-auto max-w-6xl space-y-4 p-6 md:p-10">
       <Link className="text-sm underline" href="/dashboard">
         ← All sessions
       </Link>

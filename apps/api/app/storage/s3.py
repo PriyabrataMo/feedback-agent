@@ -19,7 +19,7 @@ _REFRESH_MARGIN_SEC = 15 * 60
 _ASSUME_ROLE_DURATION_SEC = 3600  # AWS minimum for role chaining is 900; 3600 is the default max for chained roles.
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class ByobConfig:
     """
     Per-project bring-your-own-bucket settings. Never global, never logged.
@@ -44,9 +44,7 @@ class _AssumedRoleClient:
 
     def __init__(self, byob: ByobConfig, *, sts_client_factory: Callable[[], Any] | None = None):
         self._byob = byob
-        self._sts_factory = sts_client_factory or (
-            lambda: boto3.client("sts", region_name=byob.region, endpoint_url=None)
-        )
+        self._sts_factory = sts_client_factory or (lambda: boto3.client("sts", region_name=byob.region))
         self._lock = threading.Lock()
         self._client: Any = None
         self._expires_at: float = 0.0

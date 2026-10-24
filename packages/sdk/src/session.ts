@@ -11,6 +11,8 @@ const FRAME_CHECK_MS = 1000;
 const FRAME_MIN_GAP_MS = 4000;
 const FRAME_CHANGE_THRESHOLD = 0.04;
 const FRAME_WIDTH = 768;
+/** How long the agent's greeting may wait for the first screen frame. */
+const FIRST_FRAME_WAIT_MS = 2500;
 
 const CONNECTORS: Record<ClientSessionInfo["provider"], RealtimeConnector> = {
   openai: connectOpenAI,
@@ -97,6 +99,14 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
     blockSelector: "[data-private]",
     maskTextSelector: "[data-private]",
   });
+  // SPA route changes show up in the replay as custom events (tag "navigation"); torn down in end().
+  const stopNav = opts.subscribeNavigation?.((n) => {
+    try {
+      record.addCustomEvent("navigation", { from: n.from, to: n.to, title: n.title });
+    } catch {
+      /* rrweb already stopped */
+    }
+  });
   const flushEvents = async () => {
     if (pendingEvents.length === 0) return;
     const events = pendingEvents;
@@ -108,6 +118,55 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
     }
   };
   const eventTimer = setInterval(flushEvents, EVENT_FLUSH_MS);
+
+  // ---- Screen frames for the agent: downscaled, rate-limited, only when the view changed ---------
+  // Set up before the agent connects so the very first frame can go out before the greeting.
+  const video = document.createElement("video");
+  video.muted = true;
+  video.srcObject = new MediaStream(screen.getVideoTracks());
+  void video.play().catch(() => {});
+  const canvas = document.createElement("canvas");
+  const probe = document.createElement("canvas");
+  probe.width = 32;
+  probe.height = 18;
+  let lastProbe: Uint8ClampedArray | null = null;
+  let lastFrameAt = 0;
+
+  /** Returns a JPEG data URL if a frame is due and the view changed (or `force`), else null. */
+  const grabFrame = (force: boolean): string | null => {
+    if (video.videoWidth === 0 || video.readyState < 2) return null;
+    const pctx = probe.getContext("2d", { willReadFrequently: true })!;
+    pctx.drawImage(video, 0, 0, probe.width, probe.height);
+    const data = pctx.getImageData(0, 0, probe.width, probe.height).data;
+    let changed = 1;
+    if (lastProbe) {
+      let diff = 0;
+      for (let i = 0; i < data.length; i += 4) diff += Math.abs(data[i] - lastProbe[i]) / 255;
+      changed = diff / (data.length / 4);
+    }
+    lastProbe = data;
+    const due = Date.now() - lastFrameAt >= FRAME_MIN_GAP_MS;
+    if (!force && (!due || changed < FRAME_CHANGE_THRESHOLD)) return null;
+
+    canvas.width = FRAME_WIDTH;
+    canvas.height = Math.round((FRAME_WIDTH * video.videoHeight) / video.videoWidth);
+    canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
+    lastFrameAt = Date.now();
+    return canvas.toDataURL("image/jpeg", 0.6);
+  };
+
+  // Resolves with the first decodable frame (or null after a timeout) so the agent sees the screen
+  // before it speaks.
+  const firstFrame = new Promise<string | null>((resolve) => {
+    const started = Date.now();
+    const tick = () => {
+      const f = grabFrame(true);
+      if (f) return resolve(f);
+      if (Date.now() - started > FIRST_FRAME_WAIT_MS) return resolve(null);
+      setTimeout(tick, 100);
+    };
+    tick();
+  });
 
   // ---- Realtime agent ----------------------------------------------------------------------------
   const transcript: TranscriptSegment[] = [];
@@ -130,44 +189,16 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
         addNumbers(usage, u);
         usage.responses = (usage.responses as number) + 1;
       },
-    });
+    }, firstFrame);
   } catch (err) {
     // Without the agent the recording is still useful; surface the error and keep going.
     onStatus("error", err instanceof Error ? err.message : String(err));
   }
 
-  // ---- Screen frames for the agent: downscaled, rate-limited, only when the view changed ---------
-  const video = document.createElement("video");
-  video.muted = true;
-  video.srcObject = new MediaStream(screen.getVideoTracks());
-  void video.play().catch(() => {});
-  const canvas = document.createElement("canvas");
-  const probe = document.createElement("canvas");
-  probe.width = 32;
-  probe.height = 18;
-  let lastProbe: Uint8ClampedArray | null = null;
-  let lastFrameAt = 0;
-
   const frameTimer = setInterval(() => {
-    if (!agent || video.videoWidth === 0) return;
-    const pctx = probe.getContext("2d", { willReadFrequently: true })!;
-    pctx.drawImage(video, 0, 0, probe.width, probe.height);
-    const data = pctx.getImageData(0, 0, probe.width, probe.height).data;
-    let changed = 1;
-    if (lastProbe) {
-      let diff = 0;
-      for (let i = 0; i < data.length; i += 4) diff += Math.abs(data[i] - lastProbe[i]) / 255;
-      changed = diff / (data.length / 4);
-    }
-    lastProbe = data;
-    const due = Date.now() - lastFrameAt >= FRAME_MIN_GAP_MS;
-    if (!due || changed < FRAME_CHANGE_THRESHOLD) return;
-
-    canvas.width = FRAME_WIDTH;
-    canvas.height = Math.round((FRAME_WIDTH * video.videoHeight) / video.videoWidth);
-    canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
-    agent.sendFrame(canvas.toDataURL("image/jpeg", 0.6));
-    lastFrameAt = Date.now();
+    if (!agent) return;
+    const frame = grabFrame(false);
+    if (frame) agent.sendFrame(frame);
   }, FRAME_CHECK_MS);
 
   // ---- Lifecycle ---------------------------------------------------------------------------------
@@ -182,6 +213,7 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
       clearTimeout(capTimer);
       clearInterval(frameTimer);
       clearInterval(eventTimer);
+      stopNav?.();
       stopRrweb?.();
       agent?.close();
 
