@@ -54,7 +54,9 @@ class LocalStorage(StorageProvider):
 
     async def list(self, prefix: str) -> list[str]:
         base = self._resolve(prefix)
-        files = await asyncio.to_thread(lambda: [p for p in base.rglob("*") if p.is_file()] if base.is_dir() else [])
+        files = await asyncio.to_thread(
+            lambda: [p for p in base.rglob("*") if p.is_file()] if base.is_dir() else []
+        )
         return sorted(p.relative_to(self.root).as_posix() for p in files)
 
     async def delete(self, key: str) -> None:

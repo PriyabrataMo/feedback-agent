@@ -8,12 +8,17 @@ export function DemoActions() {
       <Button
         variant="outline"
         onClick={() => {
-          console.error("Invoice export failed: TypeError: Cannot read properties of undefined (reading 'lineItems')");
+          console.error(
+            "Invoice export failed: TypeError: Cannot read properties of undefined (reading 'lineItems')",
+          );
         }}
       >
         Export invoice (logs an error)
       </Button>
-      <Button variant="outline" onClick={() => void fetch("/api/does-not-exist")}>
+      <Button
+        variant="outline"
+        onClick={() => void fetch("/api/does-not-exist")}
+      >
         Load usage report (404)
       </Button>
     </div>

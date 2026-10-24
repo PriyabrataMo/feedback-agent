@@ -31,10 +31,14 @@ class OpenAIProvider:
                             "type": "function",
                             "name": "end_session",
                             "description": "Call after the closing thank-you to end the feedback session.",
-                            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": False,
+                            },
                         }
                     ],
-                }
+                },
             },
         )
         if res.status_code >= 400:

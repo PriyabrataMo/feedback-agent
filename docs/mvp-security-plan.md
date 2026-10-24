@@ -1,6 +1,6 @@
 # Feedback Agent: MVP and Security Plan
 
-**Status:** Recommended starting plan, 2026-10-24  
+**Status:** Recommended starting plan, 2026-10-24
 **Goal:** Validate that a live AI interviewer produces bug reports developers can act on without another conversation with the reporter.
 
 This is a product and engineering recommendation, not legal advice. Privacy, recording-consent, data-residency, PCI, HIPAA, and employment-monitoring obligations must be reviewed for each market and customer.

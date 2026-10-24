@@ -19,9 +19,12 @@ export type PageContext = {
   navigations?: unknown[];
 } | null;
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
-const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+const str = (v: unknown): string | undefined =>
+  typeof v === "string" && v ? v : undefined;
+const num = (v: unknown): number | undefined =>
+  typeof v === "number" && Number.isFinite(v) ? v : undefined;
 
 export function formatTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -32,7 +35,10 @@ export function formatTime(ms: number): string {
 export function sanitizeEvents(raw: unknown): ReplayEvent[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
-    (e): e is ReplayEvent => isRecord(e) && typeof e.type === "number" && typeof e.timestamp === "number",
+    (e): e is ReplayEvent =>
+      isRecord(e) &&
+      typeof e.type === "number" &&
+      typeof e.timestamp === "number",
   );
 }
 
@@ -41,11 +47,20 @@ export function isReplayable(events: ReplayEvent[]): boolean {
   return events.length >= 2 && events.some((e) => e.type === 2);
 }
 
-function navigationsFromEvents(events: ReplayEvent[], t0: number): TimelineItem[] {
+function navigationsFromEvents(
+  events: ReplayEvent[],
+  t0: number,
+): TimelineItem[] {
   const out: TimelineItem[] = [];
   for (const e of events) {
     // rrweb custom event: { type: 5, data: { tag: "navigation", payload: { from, to, title } } }
-    if (e.type !== 5 || !isRecord(e.data) || e.data.tag !== "navigation" || !isRecord(e.data.payload)) continue;
+    if (
+      e.type !== 5 ||
+      !isRecord(e.data) ||
+      e.data.tag !== "navigation" ||
+      !isRecord(e.data.payload)
+    )
+      continue;
     const p = e.data.payload;
     const to = str(p.to) ?? str(p.url) ?? str(p.href);
     if (!to) continue;
@@ -53,7 +68,10 @@ function navigationsFromEvents(events: ReplayEvent[], t0: number): TimelineItem[
       kind: "navigation",
       offset: Math.max(0, e.timestamp - t0),
       title: to,
-      detail: [str(p.title), str(p.from) ? `from ${str(p.from)}` : undefined].filter(Boolean).join(" · ") || undefined,
+      detail:
+        [str(p.title), str(p.from) ? `from ${str(p.from)}` : undefined]
+          .filter(Boolean)
+          .join(" · ") || undefined,
     });
   }
   return out;
@@ -63,7 +81,11 @@ function navigationsFromEvents(events: ReplayEvent[], t0: number): TimelineItem[
  * Builds the sorted timeline. `t0` is the epoch ms that replay time 0 corresponds to (the first replay event);
  * context entries carry epoch-ms `at` values from the same browser clock.
  */
-export function buildTimeline(events: ReplayEvent[], context: PageContext, t0: number): TimelineItem[] {
+export function buildTimeline(
+  events: ReplayEvent[],
+  context: PageContext,
+  t0: number,
+): TimelineItem[] {
   const items: TimelineItem[] = [];
 
   let navs = navigationsFromEvents(events, t0);
@@ -78,7 +100,10 @@ export function buildTimeline(events: ReplayEvent[], context: PageContext, t0: n
           kind: "navigation",
           offset: Math.max(0, at - t0),
           title: to,
-          detail: [str(n.title), str(n.from) ? `from ${str(n.from)}` : undefined].filter(Boolean).join(" · ") || undefined,
+          detail:
+            [str(n.title), str(n.from) ? `from ${str(n.from)}` : undefined]
+              .filter(Boolean)
+              .join(" · ") || undefined,
         },
       ];
     });
@@ -89,7 +114,11 @@ export function buildTimeline(events: ReplayEvent[], context: PageContext, t0: n
     if (!isRecord(e)) continue;
     const at = num(e.at);
     if (at === undefined) continue;
-    items.push({ kind: "console-error", offset: Math.max(0, at - t0), title: str(e.message) ?? "Console error" });
+    items.push({
+      kind: "console-error",
+      offset: Math.max(0, at - t0),
+      title: str(e.message) ?? "Console error",
+    });
   }
   for (const r of context?.failedRequests ?? []) {
     if (!isRecord(r)) continue;
@@ -122,7 +151,8 @@ export function normalizeSteps(steps: unknown): string[] {
   return steps.flatMap((s) => {
     if (typeof s === "string") return s.trim() ? [s] : [];
     if (isRecord(s)) {
-      const t = str(s.text) ?? str(s.step) ?? str(s.description) ?? str(s.action);
+      const t =
+        str(s.text) ?? str(s.step) ?? str(s.description) ?? str(s.action);
       return t ? [t] : [];
     }
     return [];

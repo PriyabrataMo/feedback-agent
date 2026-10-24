@@ -23,7 +23,9 @@ def sid(client):
 
 
 def post_events(client, sid, seq, events):
-    r = client.post(f"/api/v1/sessions/{sid}/events", headers=H, json={"seq": seq, "events": events})
+    r = client.post(
+        f"/api/v1/sessions/{sid}/events", headers=H, json={"seq": seq, "events": events}
+    )
     assert r.status_code == 200
 
 
@@ -35,7 +37,9 @@ def test_events_empty_when_none_recorded(client, sid):
 def test_events_concatenated_in_segment_order(client, sid):
     post_events(client, sid, 1, [{"type": 3, "timestamp": 3}, {"type": 3, "timestamp": 4}])
     post_events(client, sid, 0, [{"type": 4, "timestamp": 1}, {"type": 2, "timestamp": 2}])
-    r = client.get(f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://localhost:3000"})
+    r = client.get(
+        f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://localhost:3000"}
+    )
     assert [e["timestamp"] for e in r.json()] == [1, 2, 3, 4]
     assert r.headers["access-control-allow-origin"] == "http://localhost:3000"
 
@@ -51,9 +55,13 @@ def test_events_skips_corrupt_lines_and_non_objects(client, sid):
 
 
 def test_events_cors_only_for_allowed_origins(client, sid):
-    ok = client.get(f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://localhost:3000"})
+    ok = client.get(
+        f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://localhost:3000"}
+    )
     assert ok.headers["access-control-allow-origin"] == "http://localhost:3000"
-    evil = client.get(f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://evil.example"})
+    evil = client.get(
+        f"/api/v1/admin/sessions/{sid}/events", headers={"Origin": "http://evil.example"}
+    )
     assert "access-control-allow-origin" not in evil.headers
     none = client.get(f"/api/v1/admin/sessions/{sid}/events")
     assert "access-control-allow-origin" not in none.headers
@@ -79,9 +87,17 @@ def test_media_supports_byte_ranges(client, sid):
     asyncio.run(store.put_object(f"{prefix}/media/000001.webm", b"ABCDEFGHIJ", "video/webm"))
     url = f"/api/v1/sessions/{sid}/media"
     full = client.get(url)
-    assert full.status_code == 200 and full.content == b"0123456789ABCDEFGHIJ" and full.headers["accept-ranges"] == "bytes"
+    assert (
+        full.status_code == 200
+        and full.content == b"0123456789ABCDEFGHIJ"
+        and full.headers["accept-ranges"] == "bytes"
+    )
     part = client.get(url, headers={"Range": "bytes=8-11"})
-    assert part.status_code == 206 and part.content == b"89AB" and part.headers["content-range"] == "bytes 8-11/20"
+    assert (
+        part.status_code == 206
+        and part.content == b"89AB"
+        and part.headers["content-range"] == "bytes 8-11/20"
+    )
     assert client.get(url, headers={"Range": "bytes=15-"}).content == b"FGHIJ"
     assert client.get(url, headers={"Range": "bytes=-3"}).content == b"HIJ"
     assert client.get(url, headers={"Range": "bytes=99-"}).status_code == 416

@@ -9,6 +9,25 @@
     "dev": "bun run --filter web dev",
     "build:sdk": "bun run --filter @feedback-agent/sdk build",
     "dev:api": "cd apps/api && uv run uvicorn app.main:create_app --factory --reload --port 8000",
-    "test:api": "cd apps/api && uv run pytest -q"
+    "test:api": "cd apps/api && uv run pytest -q",
+    "lint:web": "bun run --filter web lint",
+    "format:web": "bun run --filter web format",
+    "format:check:web": "bun run --filter web format:check",
+    "typecheck:web": "bun run --filter web typecheck",
+    "quality:web": "bun run lint:web && bun run format:check:web && bun run typecheck:web",
+    "lint:api": "cd apps/api && uv run ruff check .",
+    "format:check:api": "cd apps/api && uv run ruff format --check .",
+    "typecheck:api": "cd apps/api && uv run mypy app",
+    "quality:api": "bun run lint:api && bun run format:check:api && bun run typecheck:api && bun run test:api",
+    "quality": "bun run quality:api && bun run quality:web",
+    "precommit": "apps/api/.venv/bin/pre-commit run --all-files",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
+    "prettier": "^3.9.8"
   }
 }

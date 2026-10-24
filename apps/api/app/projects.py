@@ -53,7 +53,9 @@ def _dev_sink_from_env() -> SinkConfig | None:
             secret_env="LINEAR_API_KEY",
         )
     if os.environ.get("TICKET_WEBHOOK_URL"):
-        return SinkConfig("webhook", {"url": os.environ["TICKET_WEBHOOK_URL"]}, secret_env="TICKET_WEBHOOK_SECRET")
+        return SinkConfig(
+            "webhook", {"url": os.environ["TICKET_WEBHOOK_URL"]}, secret_env="TICKET_WEBHOOK_SECRET"
+        )
     return None
 
 

@@ -1,3 +1,4 @@
+import builtins
 import json
 import secrets
 import sqlite3
@@ -204,7 +205,9 @@ class SessionStore:
         return [_row_to_session(r) for r in rows]
 
     def recent_count(self, project_id: str, since: timedelta) -> int:
-        cutoff = (datetime.now(UTC) - since).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        cutoff = (
+            (datetime.now(UTC) - since).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        )
         with self._lock:
             row = self._db.execute(
                 "SELECT COUNT(*) FROM sessions WHERE project_id = ? AND started_at >= ?",
@@ -212,7 +215,14 @@ class SessionStore:
             ).fetchone()
         return row[0]
 
-    def end(self, id: str, *, transcript: list[dict], context: dict | None, usage: dict | None) -> Session | None:
+    def end(
+        self,
+        id: str,
+        *,
+        transcript: builtins.list[dict],
+        context: dict | None,
+        usage: dict | None,
+    ) -> Session | None:
         with self._lock, self._db:
             cur = self._db.execute(
                 "UPDATE sessions SET status='ended', ended_at=?, transcript=?, context=?, usage=? WHERE id=?",
@@ -254,15 +264,21 @@ class SessionStore:
             raise ValueError(f"unknown ticket fields: {sorted(unknown)}")
         if not fields:
             return
-        values = [json.dumps(v) if k in _TICKET_JSON and v is not None else v for k, v in fields.items()]
-        assignments = ", ".join(f"{k}=?" for k in fields)  # keys validated against _TICKET_COLUMNS above
+        values = [
+            json.dumps(v) if k in _TICKET_JSON and v is not None else v for k, v in fields.items()
+        ]
+        assignments = ", ".join(
+            f"{k}=?" for k in fields
+        )  # keys validated against _TICKET_COLUMNS above
         with self._lock, self._db:
             self._db.execute(f"UPDATE sessions SET {assignments} WHERE id=?", (*values, id))
 
-    def requeue_interrupted_tickets(self) -> list[str]:
+    def requeue_interrupted_tickets(self) -> builtins.list[str]:
         """After a restart: creating -> pending (the sink is idempotent), return ids that still need a ticket."""
         with self._lock, self._db:
-            self._db.execute("UPDATE sessions SET ticket_status='pending' WHERE ticket_status='creating'")
+            self._db.execute(
+                "UPDATE sessions SET ticket_status='pending' WHERE ticket_status='creating'"
+            )
             rows = self._db.execute(
                 "SELECT id FROM sessions WHERE status='ended' AND ticket_status='pending' ORDER BY ended_at"
             ).fetchall()

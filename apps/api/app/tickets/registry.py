@@ -60,7 +60,10 @@ def _webhook(config: SinkConfig, runtime: SinkRuntime) -> TicketSink:
     )
 
 
-FACTORIES: dict[str, Callable[[SinkConfig, SinkRuntime], TicketSink]] = {"linear": _linear, "webhook": _webhook}
+FACTORIES: dict[str, Callable[[SinkConfig, SinkRuntime], TicketSink]] = {
+    "linear": _linear,
+    "webhook": _webhook,
+}
 
 
 def build_sink(config: SinkConfig, runtime: SinkRuntime) -> TicketSink:

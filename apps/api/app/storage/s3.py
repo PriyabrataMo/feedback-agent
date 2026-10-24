@@ -16,7 +16,9 @@ from .base import StorageProvider
 # Refresh assumed-role credentials this long before they expire, so every presigned URL we mint
 # (they die with the credentials that signed them) stays valid for at least this long.
 _REFRESH_MARGIN_SEC = 15 * 60
-_ASSUME_ROLE_DURATION_SEC = 3600  # AWS minimum for role chaining is 900; 3600 is the default max for chained roles.
+_ASSUME_ROLE_DURATION_SEC = (
+    3600  # AWS minimum for role chaining is 900; 3600 is the default max for chained roles.
+)
 
 
 @dataclass(frozen=True, repr=False)
@@ -44,7 +46,9 @@ class _AssumedRoleClient:
 
     def __init__(self, byob: ByobConfig, *, sts_client_factory: Callable[[], Any] | None = None):
         self._byob = byob
-        self._sts_factory = sts_client_factory or (lambda: boto3.client("sts", region_name=byob.region))
+        self._sts_factory = sts_client_factory or (
+            lambda: boto3.client("sts", region_name=byob.region)
+        )
         self._lock = threading.Lock()
         self._client: Any = None
         self._expires_at: float = 0.0
@@ -64,7 +68,11 @@ class _AssumedRoleClient:
         )
         creds = resp["Credentials"]
         expiry = creds["Expiration"]
-        expires_at = expiry.timestamp() if isinstance(expiry, datetime) else datetime.now(UTC).timestamp() + 900
+        expires_at = (
+            expiry.timestamp()
+            if isinstance(expiry, datetime)
+            else datetime.now(UTC).timestamp() + 900
+        )
         client = _make_s3_client(
             region=self._byob.region,
             endpoint_url=self._byob.endpoint_url,
@@ -92,7 +100,9 @@ def _make_s3_client(
     kwargs: dict[str, Any] = {"region_name": region, "endpoint_url": endpoint_url, "config": cfg}
     if access_key:
         kwargs.update(
-            aws_access_key_id=access_key, aws_secret_access_key=secret_key, aws_session_token=session_token
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            aws_session_token=session_token,
         )
     return boto3.client("s3", **kwargs)
 
@@ -110,8 +120,12 @@ def _friendly_error(e: Exception) -> str:
             "SignatureDoesNotMatch": "invalid credentials",
         }
         if op == "AssumeRole" and code == "AccessDenied":
-            return "AssumeRole denied: check the role's trust policy (our account id and ExternalId)"
-        return f"{op} failed: {code}" + (f" - {hints[code]}" if code in hints else f" - {msg}" if msg else "")
+            return (
+                "AssumeRole denied: check the role's trust policy (our account id and ExternalId)"
+            )
+        return f"{op} failed: {code}" + (
+            f" - {hints[code]}" if code in hints else f" - {msg}" if msg else ""
+        )
     if isinstance(e, BotoCoreError):
         return f"S3 connection error: {e}"
     return str(e)
@@ -135,13 +149,20 @@ class S3Storage(StorageProvider):
 
     @classmethod
     def managed(
-        cls, bucket: str, *, region: str | None = None, endpoint_url: str | None = None, key_prefix: str = ""
+        cls,
+        bucket: str,
+        *,
+        region: str | None = None,
+        endpoint_url: str | None = None,
+        key_prefix: str = "",
     ) -> "S3Storage":
         client = _make_s3_client(region=region, endpoint_url=endpoint_url)
         return cls(bucket, lambda: client, key_prefix=key_prefix)
 
     @classmethod
-    def byob(cls, cfg: ByobConfig, *, sts_client_factory: Callable[[], Any] | None = None) -> "S3Storage":
+    def byob(
+        cls, cfg: ByobConfig, *, sts_client_factory: Callable[[], Any] | None = None
+    ) -> "S3Storage":
         holder = _AssumedRoleClient(cfg, sts_client_factory=sts_client_factory)
         return cls(cfg.bucket, holder.get, key_prefix=cfg.key_prefix)
 
@@ -195,7 +216,9 @@ class S3Storage(StorageProvider):
 
         def run() -> bytes | None:
             try:
-                return self._client_provider().get_object(Bucket=self.bucket, Key=full)["Body"].read()
+                return (
+                    self._client_provider().get_object(Bucket=self.bucket, Key=full)["Body"].read()
+                )
             except ClientError as e:
                 if e.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
                     return None
@@ -212,7 +235,9 @@ class S3Storage(StorageProvider):
         def run() -> list[str]:
             client = self._client_provider()
             keys: list[str] = []
-            for page in client.get_paginator("list_objects_v2").paginate(Bucket=self.bucket, Prefix=full_prefix):
+            for page in client.get_paginator("list_objects_v2").paginate(
+                Bucket=self.bucket, Prefix=full_prefix
+            ):
                 keys.extend(obj["Key"] for obj in page.get("Contents", []))
             return keys
 
@@ -220,7 +245,9 @@ class S3Storage(StorageProvider):
 
     async def delete(self, key: str) -> None:
         full = self._full(key)
-        await asyncio.to_thread(lambda: self._client_provider().delete_object(Bucket=self.bucket, Key=full))
+        await asyncio.to_thread(
+            lambda: self._client_provider().delete_object(Bucket=self.bucket, Key=full)
+        )
 
     async def test_connection(self) -> tuple[bool, str | None]:
         """Probe write, read and delete; returns a short diagnostic that never contains credentials."""

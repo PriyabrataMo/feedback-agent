@@ -1,7 +1,12 @@
 /** Typed client for the FastAPI backend (apps/api). Reads run server-side; the browser fetches replay events and media. */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type TranscriptSegment = { role: "user" | "agent"; text: string; at: number };
+export type TranscriptSegment = {
+  role: "user" | "agent";
+  text: string;
+  at: number;
+};
 
 export type Session = {
   id: string;
@@ -30,7 +35,10 @@ export type Session = {
   reproSteps?: unknown[] | null;
 };
 
-export type SessionDetail = Session & { mediaChunks: number; replaySegments: number };
+export type SessionDetail = Session & {
+  mediaChunks: number;
+  replaySegments: number;
+};
 
 async function get<T>(path: string): Promise<T | null> {
   const res = await fetch(`${API_URL}/api/v1${path}`, { cache: "no-store" });
@@ -47,7 +55,9 @@ export function getSession(id: string): Promise<SessionDetail | null> {
   return get<SessionDetail>(`/admin/sessions/${encodeURIComponent(id)}`);
 }
 
-export const mediaUrl = (id: string) => `${API_URL}/api/v1/sessions/${encodeURIComponent(id)}/media`;
+export const mediaUrl = (id: string) =>
+  `${API_URL}/api/v1/sessions/${encodeURIComponent(id)}/media`;
 
 /** Browser-side GET: the API reflects allow-listed project origins (dev-only admin route). */
-export const eventsUrl = (id: string) => `${API_URL}/api/v1/admin/sessions/${encodeURIComponent(id)}/events`;
+export const eventsUrl = (id: string) =>
+  `${API_URL}/api/v1/admin/sessions/${encodeURIComponent(id)}/events`;

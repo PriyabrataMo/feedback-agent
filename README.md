@@ -20,6 +20,15 @@ bun run test:api             # pytest acceptance suite for the SDK contract
 - The SDK talks to the API origin set by `data-api` on the loader script tag (defaults to the script's own origin).
 - Next.js here is v16 with Cache Components; read `apps/web/node_modules/next/dist/docs/` before changing routing/caching.
 
+## Code quality
+
+`bun install` installs the shared Husky hooks and `uv sync` installs the Python quality tools. Commits run Ruff, mypy, repository hygiene checks, ESLint, Prettier, and Conventional Commit validation automatically.
+
+```bash
+bun run quality             # Python lint/format/types/tests + web lint/format/types
+bun run precommit           # run every pre-commit hook against the full repository
+```
+
 ## Read in this order
 1. `docs/journal.md` — running log of decisions, open questions, next steps. **Start here after any context reset.**
 2. `docs/mvp-security-plan.md` — recommended MVP boundary, security/PII threat model, and prioritized launch controls

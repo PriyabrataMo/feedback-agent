@@ -13,9 +13,52 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.18.0",
+    "mypy>=2.3.1",
     "moto>=5.2.4",
+    "pre-commit>=4.6.2",
     "pytest>=8",
+    "ruff>=0.16.6",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP"]
+ignore = [
+    "E501", # Line length is handled by the formatter.
+    "UP047", # Keep TypeVar syntax compatible with the project's Python 3.12 floor.
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app"]
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_unreachable = true
+pretty = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
+ignore_missing_imports = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+tag_format = "v$version"
+version_scheme = "pep440"
+update_changelog_on_bump = true
+major_version_zero = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

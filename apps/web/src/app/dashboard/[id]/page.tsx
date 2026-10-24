@@ -24,34 +24,50 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
             <span className="text-muted-foreground">Page:</span> {session.url}
           </p>
           <p>
-            <span className="text-muted-foreground">Status:</span> {session.status} ·{" "}
-            <span className="text-muted-foreground">Agent:</span> {session.realtimeProvider}
+            <span className="text-muted-foreground">Status:</span>{" "}
+            {session.status} ·{" "}
+            <span className="text-muted-foreground">Agent:</span>{" "}
+            {session.realtimeProvider}
           </p>
           <p>
-            <span className="text-muted-foreground">Started:</span> {new Date(session.startedAt).toLocaleString()}
-            {session.endedAt && <> · ended {new Date(session.endedAt).toLocaleString()}</>}
+            <span className="text-muted-foreground">Started:</span>{" "}
+            {new Date(session.startedAt).toLocaleString()}
+            {session.endedAt && (
+              <> · ended {new Date(session.endedAt).toLocaleString()}</>
+            )}
           </p>
           <p>
-            <span className="text-muted-foreground">Stored:</span> {session.mediaChunks} media chunks, {session.replaySegments}{" "}
-            replay segments
+            <span className="text-muted-foreground">Stored:</span>{" "}
+            {session.mediaChunks} media chunks, {session.replaySegments} replay
+            segments
           </p>
           <p className="truncate text-muted-foreground">{session.userAgent}</p>
         </CardContent>
       </Card>
 
-      {(session.summary || session.ticketUrl || session.ticketStatus || steps.length > 0) && (
+      {(session.summary ||
+        session.ticketUrl ||
+        session.ticketStatus ||
+        steps.length > 0) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               Ticket
-              {session.ticketStatus && <Badge variant="secondary">{session.ticketStatus}</Badge>}
+              {session.ticketStatus && (
+                <Badge variant="secondary">{session.ticketStatus}</Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {session.summary && <p>{session.summary}</p>}
             {session.ticketUrl && (
               <p>
-                <a className="underline" href={session.ticketUrl} target="_blank" rel="noreferrer noopener">
+                <a
+                  className="underline"
+                  href={session.ticketUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
                   {session.ticketUrl}
                 </a>
               </p>
@@ -105,13 +121,19 @@ async function SessionDetail({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
+export default function SessionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   return (
     <main className="mx-auto w-full max-w-6xl min-w-0 space-y-4 p-6 md:p-10">
       <Link className="text-sm underline" href="/dashboard">
         ← All sessions
       </Link>
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+      <Suspense
+        fallback={<p className="text-sm text-muted-foreground">Loading…</p>}
+      >
         <SessionDetail params={params} />
       </Suspense>
     </main>

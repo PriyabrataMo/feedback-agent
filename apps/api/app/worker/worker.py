@@ -35,7 +35,12 @@ class TicketWorker:
         settings: TicketSettings,
         client: httpx.AsyncClient,
     ):
-        self._store, self._projects, self._settings, self._client = store, projects, settings, client
+        self._store, self._projects, self._settings, self._client = (
+            store,
+            projects,
+            settings,
+            client,
+        )
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._tasks: list[asyncio.Task] = []
         self._runtime = SinkRuntime(
@@ -53,7 +58,7 @@ class TicketWorker:
         try:
             if self._store.mark_ticket_pending(session_id):
                 self._queue.put_nowait(session_id)
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception("could not enqueue ticket job for %s", session_id)
 
     # --- lifecycle -----------------------------------------------------------------------------
@@ -61,7 +66,10 @@ class TicketWorker:
     async def start(self) -> None:
         for session_id in self._store.requeue_interrupted_tickets():  # crash/restart recovery
             self._queue.put_nowait(session_id)
-        self._tasks = [asyncio.create_task(self._run(), name=f"ticket-worker-{i}") for i in range(max(self._settings.workers, 1))]
+        self._tasks = [
+            asyncio.create_task(self._run(), name=f"ticket-worker-{i}")
+            for i in range(max(self._settings.workers, 1))
+        ]
 
     async def stop(self) -> None:
         try:
@@ -80,7 +88,7 @@ class TicketWorker:
                 await self.process(session_id)
             except asyncio.CancelledError:
                 raise
-            except Exception:  # noqa: BLE001 - process() handles its own errors; this is the last line of defence
+            except Exception:
                 log.exception("ticket job crashed for %s", session_id)
             finally:
                 self._queue.task_done()
@@ -110,7 +118,11 @@ class TicketWorker:
                 facts = build_facts(session)
                 summary = await summarize(facts, self._settings, self._client)
                 draft = build_draft(
-                    project_id=project.id, session_id=session_id, facts=facts, summary=summary, settings=self._settings
+                    project_id=project.id,
+                    session_id=session_id,
+                    facts=facts,
+                    summary=summary,
+                    settings=self._settings,
                 )
                 store.set_ticket(
                     session_id,
@@ -131,7 +143,13 @@ class TicketWorker:
             raise  # stays 'creating'; requeued on next start (sink create is idempotent)
         except TicketError as exc:
             log.warning("ticket for %s failed: %s", session_id, exc.message)
-            store.set_ticket(session_id, ticket_status="failed", ticket_error=clean_line(exc.message, 300))
-        except Exception as exc:  # noqa: BLE001
+            store.set_ticket(
+                session_id, ticket_status="failed", ticket_error=clean_line(exc.message, 300)
+            )
+        except Exception as exc:
             log.exception("ticket for %s failed unexpectedly", session_id)
-            store.set_ticket(session_id, ticket_status="failed", ticket_error=f"internal error: {type(exc).__name__}")
+            store.set_ticket(
+                session_id,
+                ticket_status="failed",
+                ticket_error=f"internal error: {type(exc).__name__}",
+            )

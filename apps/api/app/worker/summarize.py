@@ -66,7 +66,9 @@ def _dicts(value: object, n: int) -> list[dict]:
 
 
 def _status(value: object) -> int:
-    return value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 999 else 0
+    return (
+        value if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 999 else 0
+    )
 
 
 def build_facts(session: Session) -> Facts:
@@ -74,9 +76,14 @@ def build_facts(session: Session) -> Facts:
     user = session.end_user or {}
     return Facts(
         page_url=clean_url(session.url),
-        end_user={k: clean_line(user[k], 100) for k in ("userId", "accountId", "plan") if user.get(k)},
+        end_user={
+            k: clean_line(user[k], 100) for k in ("userId", "accountId", "plan") if user.get(k)
+        },
         transcript=[
-            {"role": "agent" if t.get("role") == "agent" else "user", "text": clean_block(t.get("text"), 500)}
+            {
+                "role": "agent" if t.get("role") == "agent" else "user",
+                "text": clean_block(t.get("text"), 500),
+            }
             for t in _dicts(session.transcript, 200)
             if clean_block(t.get("text"), 500)
         ],
@@ -85,7 +92,11 @@ def build_facts(session: Session) -> Facts:
             for e in _dicts(ctx.get("consoleErrors"), 10)
         ],
         failed_requests=[
-            {"method": clean_line(r.get("method"), 10), "url": clean_url(r.get("url"), 300) or clean_line(r.get("url"), 300), "status": _status(r.get("status"))}
+            {
+                "method": clean_line(r.get("method"), 10),
+                "url": clean_url(r.get("url"), 300) or clean_line(r.get("url"), 300),
+                "status": _status(r.get("status")),
+            }
             for r in _dicts(ctx.get("failedRequests"), 10)
         ],
         clicks=[
@@ -144,7 +155,9 @@ def fallback_summary(facts: Facts) -> Summary:
         label = f' "{c["text"]}"' if c["text"] else ""
         steps.append(f"Click{label} ({c['selector'] or 'unknown element'})")
     if first_failed:
-        steps.append(f"Observe: {first_failed['method']} {first_failed['url']} fails with {first_failed['status'] or 'a network error'}")
+        steps.append(
+            f"Observe: {first_failed['method']} {first_failed['url']} fails with {first_failed['status'] or 'a network error'}"
+        )
     if first_error:
         steps.append(f"Observe console error: {first_error}")
     if first_say:
@@ -153,7 +166,13 @@ def fallback_summary(facts: Facts) -> Summary:
     serious = any(r["status"] >= 500 for r in facts.failed_requests) or any(
         e["level"] in ("uncaught", "unhandledrejection") for e in facts.console_errors
     )
-    severity = "high" if serious else "medium" if (facts.console_errors or facts.failed_requests) else "low"
+    severity = (
+        "high"
+        if serious
+        else "medium"
+        if (facts.console_errors or facts.failed_requests)
+        else "low"
+    )
 
     return Summary(
         title=clean_line(title, MAX_TITLE),

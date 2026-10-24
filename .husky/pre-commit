@@ -1,0 +1,3 @@
+# Run Python checks first, then lint and format staged frontend files.
+apps/api/.venv/bin/pre-commit run
+bunx lint-staged

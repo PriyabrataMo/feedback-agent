@@ -23,7 +23,14 @@ REGION = "us-east-1"
 
 @pytest.fixture(autouse=True)
 def aws_env(monkeypatch):
-    for k in ("AWS_PROFILE", "AWS_SESSION_TOKEN", "S3_BUCKET", "S3_REGION", "S3_ENDPOINT_URL", "STORAGE_BACKEND"):
+    for k in (
+        "AWS_PROFILE",
+        "AWS_SESSION_TOKEN",
+        "S3_BUCKET",
+        "S3_REGION",
+        "S3_ENDPOINT_URL",
+        "STORAGE_BACKEND",
+    ):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
@@ -47,7 +54,9 @@ def run(coro):
 def test_put_get_roundtrip_and_content_type(s3):
     run(s3.put_object("proj/sess/events/000001.ndjson", b"hello", "application/x-ndjson"))
     assert run(s3.get_object("proj/sess/events/000001.ndjson")) == b"hello"
-    head = boto3.client("s3", region_name=REGION).head_object(Bucket=BUCKET, Key="proj/sess/events/000001.ndjson")
+    head = boto3.client("s3", region_name=REGION).head_object(
+        Bucket=BUCKET, Key="proj/sess/events/000001.ndjson"
+    )
     assert head["ContentType"] == "application/x-ndjson"
 
 
@@ -58,7 +67,9 @@ def test_get_missing_returns_none(s3):
 def test_list_sorted_directory_semantics_and_pagination(s3):
     for i in (10, 2, 33, 1):
         run(s3.put_object(f"p/s/media/{i:06d}.webm", b"x", "video/webm"))
-    run(s3.put_object("p/s2/media/000000.webm", b"x", "video/webm"))  # sibling with a shared name prefix
+    run(
+        s3.put_object("p/s2/media/000000.webm", b"x", "video/webm")
+    )  # sibling with a shared name prefix
     assert run(s3.list("p/s")) == [f"p/s/media/{i:06d}.webm" for i in (1, 2, 10, 33)]
     assert run(s3.list("p/none")) == []
 
@@ -96,7 +107,9 @@ def test_rejects_bad_keys(s3, bad):
 
 
 def test_presign_put_url_shape_and_content_type_is_signed(s3):
-    url = run(s3.presign_put("p/s/media/000001.webm", content_type="video/webm", expires_in_sec=300))
+    url = run(
+        s3.presign_put("p/s/media/000001.webm", content_type="video/webm", expires_in_sec=300)
+    )
     u = urlparse(url)
     q = parse_qs(u.query)
     assert u.scheme == "https" and u.netloc.startswith(f"{BUCKET}.s3")
@@ -111,7 +124,9 @@ def test_presigned_put_and_get_work_end_to_end(s3):
     # moto intercepts `requests`/botocore, not httpx, so exercise the URLs through requests.
     import requests
 
-    put = run(s3.presign_put("p/s/media/000001.webm", content_type="video/webm", expires_in_sec=300))
+    put = run(
+        s3.presign_put("p/s/media/000001.webm", content_type="video/webm", expires_in_sec=300)
+    )
     r = requests.put(put, data=b"chunk", headers={"Content-Type": "video/webm"})
     assert r.status_code == 200
     get = run(s3.presign_get("p/s/media/000001.webm", expires_in_sec=300))
@@ -176,7 +191,12 @@ def test_byob_assume_role_roundtrip():
         assert run(st.test_connection()) == (True, None)
         run(st.put_object("p/s/1", b"x", "text/plain"))
         assert run(st.list("p")) == ["p/s/1"]
-        keys = [o["Key"] for o in boto3.client("s3", region_name=REGION).list_objects_v2(Bucket=BUCKET)["Contents"]]
+        keys = [
+            o["Key"]
+            for o in boto3.client("s3", region_name=REGION).list_objects_v2(Bucket=BUCKET)[
+                "Contents"
+            ]
+        ]
         assert keys == ["feedback-agent/p/s/1"]
         # presigned URLs are signed by the temporary credentials
         q = parse_qs(urlparse(run(st.presign_get("p/s/1", expires_in_sec=60))).query)
@@ -222,7 +242,9 @@ def test_byob_refreshes_credentials_near_expiry():
 def test_byob_assume_role_denied_surfaces_trust_policy_hint():
     class DenySts:
         def assume_role(self, **kw):
-            raise ClientError({"Error": {"Code": "AccessDenied", "Message": "not authorized"}}, "AssumeRole")
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "not authorized"}}, "AssumeRole"
+            )
 
     st = S3Storage.byob(BYOB, sts_client_factory=lambda: DenySts())
     ok, err = run(st.test_connection())

@@ -2,6 +2,11 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-24 — Unified Python and Next.js quality gates
+- Added Ruff formatting/linting, mypy, Prettier, stricter ESLint scripts, EditorConfig, VS Code recommendations, staged-file linting, and Conventional Commit validation, based on the `ncert-helper-agent` setup.
+- A root Husky hook coordinates Python `pre-commit` and frontend `lint-staged` checks. *Why:* this repository is one monorepo, unlike the reference project's separate backend/frontend Git repositories, so two independent hook managers would overwrite each other's Git hooks.
+- Generated `apps/web/public/sdk` bundles are excluded from web lint/format checks; their TypeScript source remains type-checked in `packages/sdk`. Python linting intentionally uses a focused `E/W/F/I/B/UP` baseline rather than broad security and stylistic rule families. *Why:* lint should catch likely defects without making routine Python edits burdensome; security review remains a separate, context-aware activity.
+
 ## 2026-10-24 — Ticket pipeline, security review fixes, replay player
 - Ticket worker + Linear/webhook sinks landed (docs/tickets.md); verified only against mocks, not real Linear/OpenAI. SDK `navigations` were being dropped by `/end`; fixed (cap 30, re-shaped server-side).
 - An adversarial review (headless Chrome + ASGI probes) found issues; **fixed now:** env check fails closed (anything but development/test hides admin + storage routes); ephemeral realtime token expires after 60s; session quota is atomic (slot reserved under a per-project lock before the provider call); upload content-type forced to video/webm|mp4; streamed body-size limits, NaN/deep-nesting/lone-surrogate no longer 500; SDK stops screen tracks when the mic is refused and rejects non-tab shares; consent copy now says private fields are hidden from the replay only.

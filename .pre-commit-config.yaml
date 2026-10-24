@@ -1,0 +1,32 @@
+# Installed indirectly by Husky so Python and frontend checks share one hook.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
+    hooks:
+      - id: ruff-check
+        name: ruff (lint)
+        args: [--fix]
+        files: ^apps/api/.*\.py$
+      - id: ruff-format
+        name: ruff (format)
+        files: ^apps/api/.*\.py$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (type check)
+        entry: apps/api/.venv/bin/mypy --config-file apps/api/pyproject.toml apps/api/app
+        language: system
+        types: [python]
+        pass_filenames: false

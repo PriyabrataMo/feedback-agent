@@ -9,17 +9,24 @@ export default function DemoPage() {
     <main className="mx-auto max-w-3xl space-y-6 p-10">
       <h1 className="text-2xl font-semibold">Acme Billing</h1>
       <p className="text-muted-foreground">
-        Pretend this is a customer&apos;s product. Break something, then click &ldquo;Report a problem&rdquo; (bottom
-        right) and describe it out loud.
+        Pretend this is a customer&apos;s product. Break something, then click
+        &ldquo;Report a problem&rdquo; (bottom right) and describe it out loud.
       </p>
       <DemoActions />
       <label className="block space-y-1 text-sm">
         <span>Card number (masked in replay)</span>
-        <input className="w-full rounded border p-2" defaultValue="4242 4242 4242 4242" />
+        <input
+          className="w-full rounded border p-2"
+          defaultValue="4242 4242 4242 4242"
+        />
       </label>
       <label className="block space-y-1 text-sm">
         <span>Account notes (explicitly private)</span>
-        <input data-private className="w-full rounded border p-2" defaultValue="secret customer note" />
+        <input
+          data-private
+          className="w-full rounded border p-2"
+          defaultValue="secret customer note"
+        />
       </label>
       <Script
         src="/sdk/loader.js"

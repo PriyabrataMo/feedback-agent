@@ -2,11 +2,24 @@
 
 import "rrweb/dist/style.css";
 import type { Replayer } from "rrweb";
-import { AlertTriangle, Globe, Pause, Play, TerminalSquare, Video as VideoIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Globe,
+  Pause,
+  Play,
+  TerminalSquare,
+  Video as VideoIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { TranscriptSegment } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -38,13 +51,35 @@ type Load =
 const SPEEDS = [0.5, 1, 2, 4] as const;
 const DEFAULT_VIEWPORT = { width: 1100, height: 800 };
 
-const KIND_META: Record<TimelineKind, { label: string; icon: typeof Globe; tone: string }> = {
-  navigation: { label: "Navigation", icon: Globe, tone: "text-sky-700 dark:text-sky-400" },
-  "console-error": { label: "Console error", icon: TerminalSquare, tone: "text-destructive" },
-  "failed-request": { label: "Failed request", icon: AlertTriangle, tone: "text-amber-700 dark:text-amber-400" },
+const KIND_META: Record<
+  TimelineKind,
+  { label: string; icon: typeof Globe; tone: string }
+> = {
+  navigation: {
+    label: "Navigation",
+    icon: Globe,
+    tone: "text-sky-700 dark:text-sky-400",
+  },
+  "console-error": {
+    label: "Console error",
+    icon: TerminalSquare,
+    tone: "text-destructive",
+  },
+  "failed-request": {
+    label: "Failed request",
+    icon: AlertTriangle,
+    tone: "text-amber-700 dark:text-amber-400",
+  },
 };
 
-export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, transcript, context }: Props) {
+export function SessionPlayback({
+  sessionId,
+  startedAt,
+  eventsUrl,
+  mediaUrl,
+  transcript,
+  context,
+}: Props) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [events, setEvents] = useState<ReplayEvent[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -77,14 +112,24 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
       })
       .catch((err: unknown) => {
         if (ctrl.signal.aborted) return;
-        setLoad({ state: "error", message: err instanceof Error ? err.message : "Could not load replay events" });
+        setLoad({
+          state: "error",
+          message:
+            err instanceof Error ? err.message : "Could not load replay events",
+        });
       });
     return () => ctrl.abort();
   }, [eventsUrl]);
 
   // Replay time 0 is the first event; without events fall back to the session start (same browser clock in practice).
-  const t0 = events.length > 0 ? Math.min(...events.map((e) => e.timestamp)) : Date.parse(startedAt) || 0;
-  const timeline = useMemo(() => buildTimeline(events, context, t0), [events, context, t0]);
+  const t0 =
+    events.length > 0
+      ? Math.min(...events.map((e) => e.timestamp))
+      : Date.parse(startedAt) || 0;
+  const timeline = useMemo(
+    () => buildTimeline(events, context, t0),
+    [events, context, t0],
+  );
 
   // ---- mount the Replayer once events are ready ----
   useEffect(() => {
@@ -98,26 +143,32 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
       try {
         const { Replayer } = await import("rrweb");
         if (cancelled) return;
-        replayer = new Replayer(events as ConstructorParameters<typeof Replayer>[0], {
-          root,
-          speed: speedRef.current,
-          // Masked inputs and blocked elements are already neutralised at record time; never let a replay
-          // warning (unknown node, failed style rule) surface as a console error.
-          showWarning: false,
-          showDebug: false,
-          mouseTail: { strokeStyle: "#ef4444" },
-          triggerFocus: false,
-          liveMode: false,
-        });
+        replayer = new Replayer(
+          events as ConstructorParameters<typeof Replayer>[0],
+          {
+            root,
+            speed: speedRef.current,
+            // Masked inputs and blocked elements are already neutralised at record time; never let a replay
+            // warning (unknown node, failed style rule) surface as a console error.
+            showWarning: false,
+            showDebug: false,
+            mouseTail: { strokeStyle: "#ef4444" },
+            triggerFocus: false,
+            liveMode: false,
+          },
+        );
         replayerRef.current = replayer;
         const meta = replayer.getMetaData();
         setTotalMs(meta.totalTime);
         const first = events.find((e) => e.type === 4);
-        const d = first?.data as { width?: number; height?: number } | undefined;
-        if (d?.width && d?.height) setViewport({ width: d.width, height: d.height });
+        const d = first?.data as
+          { width?: number; height?: number } | undefined;
+        if (d?.width && d?.height)
+          setViewport({ width: d.width, height: d.height });
         replayer.on("resize", (dim) => {
           const r = dim as { width: number; height: number };
-          if (r.width > 0 && r.height > 0) setViewport({ width: r.width, height: r.height });
+          if (r.width > 0 && r.height > 0)
+            setViewport({ width: r.width, height: r.height });
         });
         replayer.on("finish", () => {
           playingRef.current = false;
@@ -142,7 +193,12 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
         };
         raf = requestAnimationFrame(tick);
       } catch (err) {
-        if (!cancelled) setLoad({ state: "error", message: err instanceof Error ? err.message : "Replay failed to start" });
+        if (!cancelled)
+          setLoad({
+            state: "error",
+            message:
+              err instanceof Error ? err.message : "Replay failed to start",
+          });
       }
     })();
 
@@ -165,7 +221,9 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
   useEffect(() => {
     const el = frameRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setFrameWidth(entry.contentRect.width));
+    const ro = new ResizeObserver(([entry]) =>
+      setFrameWidth(entry.contentRect.width),
+    );
     ro.observe(el);
     setFrameWidth(el.clientWidth);
     return () => ro.disconnect();
@@ -247,7 +305,8 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
   // ---- recorded video <-> replay sync (the native controls also drive the replay) ----
   const onVideoPlay = () => {
     const v = videoRef.current;
-    if (v && replayerRef.current && !playingRef.current) startAt(v.currentTime * 1000);
+    if (v && replayerRef.current && !playingRef.current)
+      startAt(v.currentTime * 1000);
   };
   const onVideoPause = () => {
     const v = videoRef.current;
@@ -293,25 +352,38 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
   }, []);
   // The server-rendered <video> may have loaded its metadata before hydration attached onLoadedMetadata.
   useEffect(() => {
-    if (videoRef.current && videoRef.current.readyState >= 1) fixVideoDuration();
+    if (videoRef.current && videoRef.current.readyState >= 1)
+      fixVideoDuration();
   }, [fixVideoDuration, mediaUrl]);
 
   // ---- derived lists ----
-  const transcriptOffsets = useMemo(() => transcript.map((t) => t.at), [transcript]);
+  const transcriptOffsets = useMemo(
+    () => transcript.map((t) => t.at),
+    [transcript],
+  );
   const activeLine = activeIndex(transcriptOffsets, currentMs);
-  const timelineOffsets = useMemo(() => timeline.map((t) => t.offset), [timeline]);
+  const timelineOffsets = useMemo(
+    () => timeline.map((t) => t.offset),
+    [timeline],
+  );
   const activeEvent = activeIndex(timelineOffsets, currentMs);
   const canSeek = load.state === "ready" || mediaUrl !== null;
   const heightPx = viewport.height * scale;
 
   return (
     <div className="space-y-6">
-      <div className={cn("grid gap-6", mediaUrl ? "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : "")}>
+      <div
+        className={cn(
+          "grid gap-6",
+          mediaUrl ? "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : "",
+        )}
+      >
         <Card>
           <CardHeader>
             <CardTitle>Session replay</CardTitle>
             <CardDescription>
-              Reconstructed from recorded DOM events. Inputs and private content stay masked.
+              Reconstructed from recorded DOM events. Inputs and private content
+              stay masked.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -324,7 +396,11 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
               <div
                 ref={rootRef}
                 className="absolute top-0 left-0 origin-top-left [&_iframe]:pointer-events-none"
-                style={{ transform: `scale(${scale})`, width: viewport.width, height: viewport.height }}
+                style={{
+                  transform: `scale(${scale})`,
+                  width: viewport.width,
+                  height: viewport.height,
+                }}
                 hidden={load.state !== "ready"}
               />
               {load.state !== "ready" && (
@@ -333,13 +409,19 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
                   role={load.state === "error" ? "alert" : "status"}
                 >
                   {load.state === "loading" && "Loading replay events…"}
-                  {load.state === "empty" && "No replay was recorded for this session (fewer than two DOM events or no page snapshot)."}
-                  {load.state === "error" && `Replay unavailable: ${load.message}`}
+                  {load.state === "empty" &&
+                    "No replay was recorded for this session (fewer than two DOM events or no page snapshot)."}
+                  {load.state === "error" &&
+                    `Replay unavailable: ${load.message}`}
                 </div>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Replay controls">
+            <div
+              className="flex flex-wrap items-center gap-3"
+              role="group"
+              aria-label="Replay controls"
+            >
               <Button
                 size="sm"
                 onClick={togglePlay}
@@ -364,7 +446,11 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
                 aria-label="Replay position"
                 aria-valuetext={`${formatTime(currentMs)} of ${formatTime(totalMs)}`}
               />
-              <div className="flex items-center gap-1" role="group" aria-label="Playback speed">
+              <div
+                className="flex items-center gap-1"
+                role="group"
+                aria-label="Playback speed"
+              >
                 {SPEEDS.map((s) => (
                   <Button
                     key={s}
@@ -388,7 +474,9 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
               <CardTitle className="flex items-center gap-2">
                 <VideoIcon className="size-4" aria-hidden /> Screen recording
               </CardTitle>
-              <CardDescription>Tab video and microphone audio as captured.</CardDescription>
+              <CardDescription>
+                Tab video and microphone audio as captured.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {videoError ? (
@@ -416,20 +504,29 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
       </div>
 
       {!mediaUrl && (
-        <p className="text-sm text-muted-foreground">No screen recording was uploaded for this session.</p>
+        <p className="text-sm text-muted-foreground">
+          No screen recording was uploaded for this session.
+        </p>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Transcript</CardTitle>
-            <CardDescription>Select a line to jump the replay and recording to that moment.</CardDescription>
+            <CardDescription>
+              Select a line to jump the replay and recording to that moment.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {transcript.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No transcript captured.</p>
+              <p className="text-sm text-muted-foreground">
+                No transcript captured.
+              </p>
             ) : (
-              <ol className="max-h-96 space-y-1 overflow-auto" aria-label="Transcript">
+              <ol
+                className="max-h-96 space-y-1 overflow-auto"
+                aria-label="Transcript"
+              >
                 {transcript.map((t, i) => (
                   <li key={i}>
                     <button
@@ -447,7 +544,8 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
                         {formatTime(t.at)}
                       </span>
                       <span>
-                        <strong>{t.role === "agent" ? "Agent" : "User"}</strong> {t.text}
+                        <strong>{t.role === "agent" ? "Agent" : "User"}</strong>{" "}
+                        {t.text}
                       </span>
                     </button>
                   </li>
@@ -460,7 +558,9 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
         <Card>
           <CardHeader>
             <CardTitle>Timeline</CardTitle>
-            <CardDescription>Navigations, console errors and failed requests.</CardDescription>
+            <CardDescription>
+              Navigations, console errors and failed requests.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {timeline.length === 0 ? (
@@ -470,7 +570,10 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
                   : "No navigations, console errors or failed requests were captured."}
               </p>
             ) : (
-              <ol className="max-h-96 space-y-1 overflow-auto" aria-label="Session timeline">
+              <ol
+                className="max-h-96 space-y-1 overflow-auto"
+                aria-label="Session timeline"
+              >
                 {timeline.map((item, i) => {
                   const meta = KIND_META[item.kind];
                   const Icon = meta.icon;
@@ -490,9 +593,14 @@ export function SessionPlayback({ sessionId, startedAt, eventsUrl, mediaUrl, tra
                         <span className="w-10 shrink-0 pt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                           {formatTime(item.offset)}
                         </span>
-                        <Icon className={cn("mt-0.5 size-4 shrink-0", meta.tone)} aria-hidden />
+                        <Icon
+                          className={cn("mt-0.5 size-4 shrink-0", meta.tone)}
+                          aria-hidden
+                        />
                         <span className="min-w-0">
-                          <span className="block break-words">{item.title}</span>
+                          <span className="block break-words">
+                            {item.title}
+                          </span>
                           <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="outline">{meta.label}</Badge>
                             {item.detail}

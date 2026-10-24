@@ -5,7 +5,14 @@ from .base import StorageProvider
 from .local import LocalStorage
 from .s3 import ByobConfig, S3Storage
 
-__all__ = ["ByobConfig", "LocalStorage", "S3Storage", "StorageConfigError", "StorageProvider", "storage_for"]
+__all__ = [
+    "ByobConfig",
+    "LocalStorage",
+    "S3Storage",
+    "StorageConfigError",
+    "StorageProvider",
+    "storage_for",
+]
 
 
 class StorageConfigError(RuntimeError):
@@ -60,7 +67,9 @@ def storage_for(
         if settings.storage_backend == "local":
             return local
         if settings.storage_backend != "s3":
-            raise StorageConfigError(f"unknown STORAGE_BACKEND {settings.storage_backend!r} (use 'local' or 's3')")
+            raise StorageConfigError(
+                f"unknown STORAGE_BACKEND {settings.storage_backend!r} (use 'local' or 's3')"
+            )
 
         cfg = settings.s3
         if not cfg.bucket:
@@ -68,6 +77,9 @@ def storage_for(
         cache_key = (cfg.bucket, cfg.region, cfg.endpoint_url, cfg.key_prefix)
         if cache_key not in _managed:
             _managed[cache_key] = S3Storage.managed(
-                cfg.bucket, region=cfg.region, endpoint_url=cfg.endpoint_url, key_prefix=cfg.key_prefix
+                cfg.bucket,
+                region=cfg.region,
+                endpoint_url=cfg.endpoint_url,
+                key_prefix=cfg.key_prefix,
             )
         return _managed[cache_key]

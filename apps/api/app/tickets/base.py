@@ -16,7 +16,14 @@ SEVERITIES = ("low", "medium", "high", "critical")
 class TicketError(Exception):
     """A sink failure. `retryable` = transient (network, 5xx, 429); `message` must never contain secrets."""
 
-    def __init__(self, message: str, *, retryable: bool = False, retry_after: float | None = None, auth: bool = False):
+    def __init__(
+        self,
+        message: str,
+        *,
+        retryable: bool = False,
+        retry_after: float | None = None,
+        auth: bool = False,
+    ):
         super().__init__(message)
         self.message = message
         self.auth = auth  # credentials rejected: retrying or looking up can't help

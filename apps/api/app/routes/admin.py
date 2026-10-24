@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -97,7 +98,7 @@ async def stitched_media(session_id: str, request: Request):
     )
 
 
-def _parse_range(header: str | None, size: int) -> tuple[int, int] | str | None:
+def _parse_range(header: str | None, size: int) -> tuple[int, int] | Literal["invalid"] | None:
     """Single `bytes=a-b` / `bytes=a-` / `bytes=-n` range. None = no/ignored header, "invalid" = 416."""
     if not header or not header.startswith("bytes=") or "," in header:
         return None

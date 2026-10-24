@@ -4,7 +4,15 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Request
 
-from ..http import ApiError, as_int, authenticate_sdk, jsend, parse_json, read_body, read_json
+from ..http import (
+    ApiError,
+    as_int,
+    authenticate_sdk,
+    jsend,
+    parse_json,
+    read_body,
+    read_json,
+)
 from ..realtime import AGENT_INSTRUCTIONS
 from ..sessions import Session, new_session_id
 from ..storage import storage_for
@@ -35,7 +43,12 @@ def clean_usage(value: object, depth: int = 0) -> dict | None:
     out: dict = {}
     for k, v in list(value.items())[:30]:
         key = str(k)[:40]
-        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf"):
+        if (
+            isinstance(v, (int, float))
+            and not isinstance(v, bool)
+            and v == v
+            and abs(v) != float("inf")
+        ):
             out[key] = v
         elif (child := clean_usage(v, depth + 1)) is not None:
             out[key] = child
@@ -45,7 +58,11 @@ def clean_usage(value: object, depth: int = 0) -> dict | None:
 def _clean_user(value: object) -> dict | None:
     if not isinstance(value, dict):
         return None
-    return {k: str(value[k])[:200] for k in ("userId", "accountId", "plan") if isinstance(value.get(k), (str, int))}
+    return {
+        k: str(value[k])[:200]
+        for k in ("userId", "accountId", "plan")
+        if isinstance(value.get(k), (str, int))
+    }
 
 
 def _owned_session(request: Request, session_id: str, project_id: str, origin: str) -> Session:
@@ -67,7 +84,10 @@ async def create_session(request: Request):
     # Reserve the quota slot (a row) before the slow provider call, under a lock, so concurrent
     # creates can't all pass the check. A provider failure releases the slot.
     async with _quota_lock(project.id):
-        if state.store.recent_count(project.id, timedelta(hours=1)) >= project.max_sessions_per_hour:
+        if (
+            state.store.recent_count(project.id, timedelta(hours=1))
+            >= project.max_sessions_per_hour
+        ):
             raise ApiError(429, "rate_limited", origin)
         state.store.create(
             id=session_id,
@@ -86,7 +106,11 @@ async def create_session(request: Request):
         state.store.delete(session_id)
         raise ApiError(502, "realtime_unavailable", origin) from None
     return jsend(
-        {"sessionId": session_id, "maxSessionSeconds": project.max_session_seconds, "realtime": client.to_api()},
+        {
+            "sessionId": session_id,
+            "maxSessionSeconds": project.max_session_seconds,
+            "realtime": client.to_api(),
+        },
         201,
         origin,
     )
@@ -98,7 +122,11 @@ async def upload_url(session_id: str, request: Request):
     project, origin = auth.project, auth.origin
     session = _owned_session(request, session_id, project.id, origin)
 
-    deadline = datetime.fromisoformat(session.started_at) + timedelta(seconds=project.max_session_seconds) + GRACE
+    deadline = (
+        datetime.fromisoformat(session.started_at)
+        + timedelta(seconds=project.max_session_seconds)
+        + GRACE
+    )
     if datetime.now(UTC) > deadline:
         raise ApiError(410, "session_expired", origin)
 
@@ -108,7 +136,8 @@ async def upload_url(session_id: str, request: Request):
         raise ApiError(400, "bad_seq", origin)
 
     # Never sign a client-chosen type (a text/html object would be stored XSS on the bucket origin).
-    requested = body.get("contentType") if isinstance(body.get("contentType"), str) else ""
+    requested_value = body.get("contentType")
+    requested = requested_value if isinstance(requested_value, str) else ""
     ext = "mp4" if "mp4" in requested else "webm"
     content_type = f"video/{ext}"
     # One object per MediaRecorder chunk (avoids S3's 5 MB multipart minimum; the worker stitches them).
@@ -136,7 +165,9 @@ async def ingest_events(session_id: str, request: Request):
         raise ApiError(400, "bad_request", origin)
 
     # rrweb events stored as NDJSON segments; Postgres will only hold pointers.
-    ndjson = "\n".join(json.dumps(e, separators=(",", ":")) for e in events)  # ASCII-escaped: lone surrogates are safe
+    ndjson = "\n".join(
+        json.dumps(e, separators=(",", ":")) for e in events
+    )  # ASCII-escaped: lone surrogates are safe
     key = f"{session.prefix}/events/{seq:06d}.ndjson"
     storage = storage_for(request.app.state.local_storage, project.id)
     await storage.put_object(key, ndjson.encode(), "application/x-ndjson")
@@ -171,8 +202,12 @@ async def end_session(session_id: str, request: Request):
         else None
     )
 
-    request.app.state.store.end(session_id, transcript=transcript, context=context, usage=clean_usage(body.get("usage")))
-    request.app.state.worker.enqueue(session_id)  # never raises; ticket failures don't affect this response
+    request.app.state.store.end(
+        session_id, transcript=transcript, context=context, usage=clean_usage(body.get("usage"))
+    )
+    request.app.state.worker.enqueue(
+        session_id
+    )  # never raises; ticket failures don't affect this response
     return jsend({"ok": True}, 200, origin)
 
 
@@ -193,4 +228,8 @@ def _clean_navigations(value: object) -> list[dict]:
 
 
 def _number(value: object) -> float | int:
-    return value if isinstance(value, (int, float)) and not isinstance(value, bool) and value == value else 0
+    return (
+        value
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value == value
+        else 0
+    )

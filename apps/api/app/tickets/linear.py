@@ -14,7 +14,14 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
-from .base import TicketDraft, TicketError, TicketResult, is_retryable_status, parse_retry_after, retry_async
+from .base import (
+    TicketDraft,
+    TicketError,
+    TicketResult,
+    is_retryable_status,
+    parse_retry_after,
+    retry_async,
+)
 
 LINEAR_URL = "https://api.linear.app/graphql"
 
@@ -116,8 +123,12 @@ class LinearSink:
                 json={"query": query, "variables": variables},
                 headers={"Authorization": self._auth, "Content-Type": "application/json"},
             )
-        except httpx.HTTPError as exc:  # timeouts, connection resets: the request may or may not have landed
-            raise TicketError(f"Linear request failed: {type(exc).__name__}", retryable=True) from None
+        except (
+            httpx.HTTPError
+        ) as exc:  # timeouts, connection resets: the request may or may not have landed
+            raise TicketError(
+                f"Linear request failed: {type(exc).__name__}", retryable=True
+            ) from None
 
         body: dict = {}
         try:
@@ -125,15 +136,22 @@ class LinearSink:
             body = parsed if isinstance(parsed, dict) else {}
         except ValueError:
             pass
-        errors = body.get("errors") if isinstance(body.get("errors"), list) else []
-        messages = "; ".join(str(e.get("message", ""))[:150] for e in errors if isinstance(e, dict))[:300]
+        raw_errors = body.get("errors")
+        errors: list[object] = raw_errors if isinstance(raw_errors, list) else []
+        messages = "; ".join(
+            str(e.get("message", ""))[:150] for e in errors if isinstance(e, dict)
+        )[:300]
         rate_limited = any(
-            isinstance(e, dict) and isinstance(e.get("extensions"), dict) and e["extensions"].get("code") == "RATELIMITED"
+            isinstance(e, dict)
+            and isinstance(e.get("extensions"), dict)
+            and e["extensions"].get("code") == "RATELIMITED"
             for e in errors
         )
 
         if response.status_code in (401, 403):
-            raise TicketError(f"Linear rejected the API key (HTTP {response.status_code})", auth=True)
+            raise TicketError(
+                f"Linear rejected the API key (HTTP {response.status_code})", auth=True
+            )
         if rate_limited or is_retryable_status(response.status_code):
             raise TicketError(
                 f"Linear unavailable or rate limited (HTTP {response.status_code})",
@@ -141,7 +159,9 @@ class LinearSink:
                 retry_after=parse_retry_after(response),
             )
         if response.status_code >= 400 or errors:
-            raise TicketError(f"Linear error (HTTP {response.status_code}): {messages or 'no detail'}")
+            raise TicketError(
+                f"Linear error (HTTP {response.status_code}): {messages or 'no detail'}"
+            )
         data = body.get("data")
         if not isinstance(data, dict):
             raise TicketError("Linear returned no data")
@@ -149,4 +169,6 @@ class LinearSink:
 
 
 def _result(issue: dict) -> TicketResult:
-    return TicketResult(external_id=str(issue.get("identifier") or issue.get("id")), url=issue.get("url"))
+    return TicketResult(
+        external_id=str(issue.get("identifier") or issue.get("id")), url=issue.get("url")
+    )

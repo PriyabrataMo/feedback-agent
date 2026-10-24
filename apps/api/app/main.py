@@ -46,7 +46,9 @@ def create_app(
     app.state.log = logging.getLogger("feedback_api")
     app.state.projects = projects or dev_registry()
     app.state.store = SessionStore(str(settings.data_dir / "sessions.db"))
-    app.state.local_storage = LocalStorage(settings.data_dir / "objects", settings.dev_storage_secret)
+    app.state.local_storage = LocalStorage(
+        settings.data_dir / "objects", settings.dev_storage_secret
+    )
     app.state.worker = TicketWorker(
         store=app.state.store,
         projects=app.state.projects,
@@ -64,7 +66,11 @@ def create_app(
 
     @app.exception_handler(ApiError)
     async def api_error(_: Request, exc: ApiError):
-        return JSONResponse({"error": exc.code}, status_code=exc.status, headers=cors_headers(exc.origin) if exc.origin else None)
+        return JSONResponse(
+            {"error": exc.code},
+            status_code=exc.status,
+            headers=cors_headers(exc.origin) if exc.origin else None,
+        )
 
     @app.middleware("http")
     async def preflight(request: Request, call_next):
@@ -84,4 +90,3 @@ def create_app(
     app.include_router(storage.router)
     app.include_router(admin.router)
     return app
-
