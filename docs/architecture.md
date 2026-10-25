@@ -41,7 +41,7 @@
 ### 1. SDK (`loader.js`, ~5 KB)
 - Loads widget in a sandboxed iframe (host CSS/JS can't break it). Iframe needs `allow="display-capture; microphone"`.
 - `getDisplayMedia({ preferCurrentTab: true })` and `getUserMedia` must run inside the click handler or the browser blocks them.
-- Passively buffers rrweb events, last ~50 console entries, failed requests (wrapped fetch/XHR), last 10 clicks. Rolling window so the agent can include what happened *before* the click.
+- Passively buffers rrweb events, the last 100 console entries across all levels, request metadata for the last 100 fetch/XHR calls, and the last 10 clicks. Once a session starts, every new console/network entry is also added to the batched rrweb event stream. Network capture excludes the SDK's own calls and never includes headers or bodies; URLs are stripped to origin + path. Rolling windows let the report include what happened *before* the click without an unbounded end-session payload.
 - Masking runs client-side before anything leaves the browser: `data-private`, password/credit-card inputs, configurable selectors.
 - Host app calls `YourSDK.identify({ userId, accountId, plan })`.
 

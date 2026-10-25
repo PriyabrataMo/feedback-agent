@@ -2,7 +2,12 @@
 
 export type ReplayEvent = { type: number; timestamp: number; data?: unknown };
 
-export type TimelineKind = "navigation" | "console-error" | "failed-request";
+export type TimelineKind =
+  | "navigation"
+  | "console-log"
+  | "console-error"
+  | "network-request"
+  | "failed-request";
 
 export type TimelineItem = {
   kind: TimelineKind;
@@ -13,6 +18,8 @@ export type TimelineItem = {
 };
 
 export type PageContext = {
+  consoleLogs?: unknown[];
+  networkRequests?: unknown[];
   consoleErrors?: unknown[];
   failedRequests?: unknown[];
   clicks?: unknown[];
@@ -77,6 +84,70 @@ function navigationsFromEvents(
   return out;
 }
 
+function diagnosticKey(
+  entry: Record<string, unknown>,
+  fields: string[],
+): string {
+  return fields.map((field) => String(entry[field] ?? "")).join("\u0000");
+}
+
+function diagnosticsFromEvents(events: ReplayEvent[], t0: number) {
+  const items: TimelineItem[] = [];
+  const consoleKeys = new Set<string>();
+  const requestKeys = new Set<string>();
+  for (const event of events) {
+    if (
+      event.type !== 5 ||
+      !isRecord(event.data) ||
+      !isRecord(event.data.payload)
+    )
+      continue;
+    const entry = event.data.payload;
+    if (event.data.tag === "diagnostic:console") {
+      const message = str(entry.message) ?? "Console message";
+      const level = str(entry.level) ?? "log";
+      consoleKeys.add(diagnosticKey(entry, ["level", "message", "at"]));
+      items.push({
+        kind: ["debug", "log", "info"].includes(level)
+          ? "console-log"
+          : "console-error",
+        offset: Math.max(0, event.timestamp - t0),
+        title: message,
+        detail: level,
+      });
+    } else if (event.data.tag === "diagnostic:network") {
+      const method = str(entry.method) ?? "GET";
+      const url = str(entry.url) ?? "(unknown url)";
+      const status = num(entry.status) ?? 0;
+      const duration = num(entry.durationMs);
+      requestKeys.add(
+        diagnosticKey(entry, [
+          "type",
+          "method",
+          "url",
+          "status",
+          "durationMs",
+          "at",
+        ]),
+      );
+      items.push({
+        kind:
+          status === 0 || status >= 400 ? "failed-request" : "network-request",
+        offset: Math.max(0, event.timestamp - t0),
+        title: `${method} ${url}`,
+        detail: [
+          status ? `Status ${status}` : "Network error",
+          duration === undefined ? undefined : `${duration} ms`,
+          str(entry.type)?.toUpperCase(),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
+    }
+  }
+  return { items, consoleKeys, requestKeys };
+}
+
 /**
  * Builds the sorted timeline. `t0` is the epoch ms that replay time 0 corresponds to (the first replay event);
  * context entries carry epoch-ms `at` values from the same browser clock.
@@ -110,26 +181,64 @@ export function buildTimeline(
   }
   items.push(...navs);
 
-  for (const e of context?.consoleErrors ?? []) {
+  const diagnostics = diagnosticsFromEvents(events, t0);
+  items.push(...diagnostics.items);
+
+  for (const e of context?.consoleLogs ?? context?.consoleErrors ?? []) {
     if (!isRecord(e)) continue;
     const at = num(e.at);
     if (at === undefined) continue;
+    if (
+      diagnostics.consoleKeys.has(diagnosticKey(e, ["level", "message", "at"]))
+    )
+      continue;
+    const level = str(e.level) ?? "log";
     items.push({
-      kind: "console-error",
+      kind: ["debug", "log", "info"].includes(level)
+        ? "console-log"
+        : "console-error",
       offset: Math.max(0, at - t0),
-      title: str(e.message) ?? "Console error",
+      title: str(e.message) ?? "Console message",
+      detail: level,
     });
   }
-  for (const r of context?.failedRequests ?? []) {
+  for (const r of context?.networkRequests ?? context?.failedRequests ?? []) {
     if (!isRecord(r)) continue;
     const at = num(r.at);
     if (at === undefined) continue;
+    if (
+      diagnostics.requestKeys.has(
+        diagnosticKey(r, [
+          "type",
+          "method",
+          "url",
+          "status",
+          "durationMs",
+          "at",
+        ]),
+      )
+    )
+      continue;
     const status = num(r.status);
+    const duration = num(r.durationMs);
     items.push({
-      kind: "failed-request",
+      kind:
+        status === 0 || (status !== undefined && status >= 400)
+          ? "failed-request"
+          : "network-request",
       offset: Math.max(0, at - t0),
       title: `${str(r.method) ?? "GET"} ${str(r.url) ?? "(unknown url)"}`,
-      detail: status !== undefined ? `Status ${status}` : str(r.error),
+      detail: [
+        status
+          ? `Status ${status}`
+          : status === 0
+            ? "Network error"
+            : str(r.error),
+        duration === undefined ? undefined : `${duration} ms`,
+        str(r.type)?.toUpperCase(),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     });
   }
   return items.sort((a, b) => a.offset - b.offset);

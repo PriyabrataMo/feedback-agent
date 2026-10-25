@@ -101,7 +101,7 @@ async def create_session(request: Request):
 
     try:
         client = await state.realtime.create_client_session(instructions=AGENT_INSTRUCTIONS)
-    except Exception:  # noqa: BLE001 - provider failure must not leak details to the browser
+    except Exception:
         request.app.state.log.exception("realtime provider failed")
         state.store.delete(session_id)
         raise ApiError(502, "realtime_unavailable", origin) from None
@@ -191,10 +191,28 @@ async def end_session(session_id: str, request: Request):
         if isinstance(t, dict)
     ]
     raw_ctx = body.get("context")
+    console_logs = (
+        _clean_console_entries(raw_ctx.get("consoleLogs"), 100) if isinstance(raw_ctx, dict) else []
+    )
+    network_requests = (
+        _clean_network_entries(raw_ctx.get("networkRequests"), 100)
+        if isinstance(raw_ctx, dict)
+        else []
+    )
     context = (
         {
-            "consoleErrors": _clip(raw_ctx.get("consoleErrors"), 50),
-            "failedRequests": _clip(raw_ctx.get("failedRequests"), 50),
+            "consoleLogs": console_logs,
+            "networkRequests": network_requests,
+            "consoleErrors": _clean_console_entries(raw_ctx.get("consoleErrors"), 50)
+            or [entry for entry in console_logs if entry["level"] not in {"debug", "log", "info"}][
+                -50:
+            ],
+            "failedRequests": _clean_network_entries(raw_ctx.get("failedRequests"), 50)
+            or [
+                entry
+                for entry in network_requests
+                if entry["status"] == 0 or entry["status"] >= 400
+            ][-50:],
             "clicks": _clip(raw_ctx.get("clicks"), 10),
             "navigations": _clean_navigations(raw_ctx.get("navigations")),
         }
@@ -209,6 +227,45 @@ async def end_session(session_id: str, request: Request):
         session_id
     )  # never raises; ticket failures don't affect this response
     return jsend({"ok": True}, 200, origin)
+
+
+def _clean_console_entries(value: object, limit: int) -> list[dict]:
+    """Re-shape bounded browser console entries; captured text is untrusted."""
+    out = []
+    for entry in _clip(value, limit):
+        if isinstance(entry, dict):
+            out.append(
+                {
+                    "level": str(entry.get("level") or "log")[:20],
+                    "message": str(entry.get("message") or "")[:1000],
+                    "at": _number(entry.get("at")),
+                }
+            )
+    return out
+
+
+def _clean_network_entries(value: object, limit: int) -> list[dict]:
+    """Keep diagnostic request metadata only—never headers, query strings or bodies."""
+    out = []
+    for entry in _clip(value, limit):
+        if not isinstance(entry, dict):
+            continue
+        status = as_int(entry.get("status"))
+        duration = _number(entry.get("durationMs"))
+        # Defence in depth if a modified SDK submits a raw URL. Fragments never reach an HTTP server and
+        # query values commonly contain credentials or PII, so neither belongs in diagnostics.
+        url = str(entry.get("url") or "").split("#", 1)[0].split("?", 1)[0][:300]
+        out.append(
+            {
+                "type": "xhr" if entry.get("type") == "xhr" else "fetch",
+                "method": str(entry.get("method") or "GET").upper()[:10],
+                "url": url,
+                "status": status if status is not None and 0 <= status <= 999 else 0,
+                "durationMs": max(0, min(duration, 3_600_000)),
+                "at": _number(entry.get("at")),
+            }
+        )
+    return out
 
 
 def _clean_navigations(value: object) -> list[dict]:

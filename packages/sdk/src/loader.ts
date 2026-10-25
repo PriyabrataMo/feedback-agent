@@ -1,6 +1,11 @@
-import { installContextCollector } from "./context";
+import { installContextCollector, subscribeDiagnostics } from "./context";
 import { subscribeNavigation } from "./nav";
-import type { EndUser, SessionHandle, SessionStatus, TranscriptSegment } from "./types";
+import type {
+  EndUser,
+  SessionHandle,
+  SessionStatus,
+  TranscriptSegment,
+} from "./types";
 
 /**
  * Tiny classic-script entry: <script src=".../sdk/loader.js" data-key="pk_..." data-api="https://api..."></script>
@@ -17,7 +22,9 @@ if (!publicKey || !scriptUrl) {
   // The API lives on its own origin (FastAPI); data-api overrides the default of the script's own origin.
   const apiBase = script?.dataset.api?.replace(/\/$/, "") || scriptUrl.origin;
   const sessionModuleUrl = new URL("session.js", scriptUrl).href;
-  const getContext = installContextCollector((url) => url.startsWith(apiBase + "/api/v1"));
+  const getContext = installContextCollector((url) =>
+    url.startsWith(apiBase + "/api/v1"),
+  );
 
   let user: EndUser | null = null;
   (window as any).Showbug = {
@@ -28,7 +35,8 @@ if (!publicKey || !scriptUrl) {
 
   const host = document.createElement("div");
   host.setAttribute("data-private", "");
-  host.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:2147483647;";
+  host.style.cssText =
+    "position:fixed;right:20px;bottom:20px;z-index:2147483647;";
   const root = host.attachShadow({ mode: "closed" });
   root.innerHTML = `
     <style>
@@ -54,7 +62,7 @@ if (!publicKey || !scriptUrl) {
     <div class="panel" hidden>
       <div class="intro">
         <h4>Tell us what went wrong</h4>
-        <p class="consent">You'll be asked to share this tab and your microphone. A voice assistant (powered by an AI provider) will ask a few questions. Your screen video, audio and a replay of the page are recorded so the team can fix the problem. Fields marked private are hidden from the replay only, not from the video.</p>
+        <p class="consent">You'll be asked to share this tab and your microphone. A voice assistant (powered by an AI provider) will ask a few questions. Your screen video, audio, a replay of the page, and recent console/network diagnostics are recorded so the team can fix the problem. Network bodies, headers, and URL query values are not recorded. Fields marked private are hidden from the replay only, not from the video.</p>
         <div class="row"><button class="primary start">Start</button><button class="ghost cancel">Cancel</button></div>
       </div>
       <div class="live" hidden>
@@ -116,7 +124,9 @@ if (!publicKey || !scriptUrl) {
         audio: false,
         preferCurrentTab: true,
       } as DisplayMediaStreamOptions);
-      mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      mic = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
     } catch {
       // If the mic was refused after the screen was granted, don't leave "Sharing this tab" running.
       screen?.getTracks().forEach((t) => t.stop());
@@ -124,7 +134,10 @@ if (!publicKey || !scriptUrl) {
       return;
     }
     // Hints only: a window/whole-screen share can't be covered by our DOM masking, so require a tab.
-    if (screen.getVideoTracks()[0]?.getSettings().displaySurface !== undefined && screen.getVideoTracks()[0].getSettings().displaySurface !== "browser") {
+    if (
+      screen.getVideoTracks()[0]?.getSettings().displaySurface !== undefined &&
+      screen.getVideoTracks()[0].getSettings().displaySurface !== "browser"
+    ) {
       [...screen.getTracks(), ...mic.getTracks()].forEach((t) => t.stop());
       reset();
       return;
@@ -143,7 +156,9 @@ if (!publicKey || !scriptUrl) {
     };
 
     try {
-      const mod: typeof import("./session") = await import(/* webpackIgnore: true */ sessionModuleUrl);
+      const mod: typeof import("./session") = await import(
+        /* webpackIgnore: true */ sessionModuleUrl
+      );
       handle = await mod.runSession({
         apiBase,
         publicKey,
@@ -152,6 +167,7 @@ if (!publicKey || !scriptUrl) {
         mic,
         getContext,
         subscribeNavigation,
+        subscribeDiagnostics,
         onStatus: setStatus,
         onTranscript: addLine,
       });
