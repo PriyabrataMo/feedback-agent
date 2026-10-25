@@ -2,6 +2,16 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Plan: production storage (S3 layout, signed URLs, deletion, DB references, scale)
+- Plan only, nothing built or deployed: `docs/storage-plan.md`. It sits on the earlier AWS decision (new personal account, never the company profiles; pre-prod and prod buckets, dev on local storage).
+- Finding (code reading plus an offline botocore check, **not run against real S3**): the API presigns `Content-Type: video/webm` while the SDK sends `recorder.mimeType`, usually `video/webm;codecs=...`. `content-type` is a signed header, so real S3 would answer `SignatureDoesNotMatch` and every chunk upload would fail. Local backend and moto do not check signatures, so tests pass. Fix: switch to a presigned POST policy where the API dictates the exact fields.
+- Finding: `stitched_media` (`routes/admin.py`) downloads the whole recording into API memory on every playback request and seek; replay events do the same. Plan: a finaliser writes `final/media.*` (ffmpeg `-c copy` remux) and `final/replay.json.gz`; the dashboard gets a short presigned GET.
+- Finding: purge deletes one key at a time (about 14 hours for 1M objects); plan uses `DeleteObjects` and one state machine for cancel, retention, abandoned, project and org delete, with a 5-minute wait for in-flight signed uploads and a second listing to prove the prefix empty.
+- DB reference design: deterministic keys, so the session row holds state, reserved and stored counts and bytes, `final_key` and retention, never a row per object and never a URL. Caps are enforced by a conditional update at the moment a URL is minted. *Why:* about 72 objects per session would be 72M documents at 1M sessions, and a signed URL is a bearer credential.
+- S3 lifecycle is a backstop at the retention ceiling plus 3 days, not equal to it, so S3 cannot delete under a row that still says `ready`.
+- Scale model (assumptions, to be measured): 1M sessions a month is about 190 API requests and S3 writes per second at 10x peak, about 15 TB stored, roughly US$830 a month of S3 at remembered us-east-1 prices. S3 and MongoDB are not the first limit; the API events path (thread pool) and the finaliser are.
+- Open: retention ceiling, abandoned-session retention, keep raw chunks or not, per-session caps, region, upload CORS `*`, ffmpeg remux, when to add CloudFront. Still unanswered from before: personal AWS account yes/no, region.
+
 ## 2026-10-25 — Decision: Auth0 for dashboard identity, M2M only where a machine must call Auth0
 - Decision (user): use Auth0 instead of the custom password/login design in `docs/tenancy.md`. Plan: `docs/auth0-plan.md` (plan only, nothing built; `tenancy.md` not yet updated).
 - Split: Auth0 owns login, passwords, reset, verification, MFA and later SSO. Our MongoDB keeps `memberships` and roles. *Why:* Auth0 Free allows 5 Organizations and has no Role Management, and a membership row revokes access on the next request while a token claim lives until expiry. The tenancy kernel (scopes, guarded views, storage prefixes, quotas, purge) is unchanged. Auth0 Organizations is deferred until a customer needs enterprise SSO.
