@@ -380,7 +380,7 @@ export default function Home() {
 
       <main id="main">
         <section className="relative">
-          <div className="mx-auto grid max-w-7xl gap-16 px-5 pb-24 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:gap-20 lg:pb-32 lg:pt-24">
+          <div className="mx-auto grid max-w-7xl gap-16 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:gap-20 lg:pb-24 lg:pt-24">
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-sb-line bg-sb-surface px-3 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
                 <span className="size-2 rounded-full bg-sb-mark" />
@@ -420,42 +420,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          aria-labelledby="prototype-status"
-          className="border-y border-sb-line bg-sb-mark/10"
-        >
-          <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 lg:grid-cols-[0.65fr_1.35fr] lg:items-center">
-            <div>
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-sb-soft">
-                Product evidence
-              </p>
-              <h2
-                id="prototype-status"
-                className="mt-1 font-display text-xl font-semibold"
-              >
-                Working in the prototype today
-              </h2>
-            </div>
-            <ul className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm text-sb-soft sm:grid-cols-4">
-              {[
-                "Embeddable widget",
-                "Live voice follow-ups",
-                "Permissioned capture",
-                "Replay + report draft",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 shrink-0 rounded-full bg-sb-mark"
-                  />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+        <section className="mx-auto max-w-7xl border-t border-sb-line px-5 py-20 sm:px-8 lg:py-28">
           <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
             <div>
               <p className="sb-kicker">The problem</p>
