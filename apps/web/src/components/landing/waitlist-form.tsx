@@ -1,23 +1,64 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "loading" | "success" | "error";
 
 const ERROR_COPY: Record<number, string> = {
-  413: "That request is too long. Shorten the workflow note and try again.",
-  422: "Check the highlighted details and try again.",
+  413: "That request is too long. Shorten the optional note and try again.",
+  422: "That email address doesn’t look right. Check it and try again.",
   429: "Too many attempts. Wait a minute, then try again.",
 };
 const GENERIC_ERROR =
-  "We couldn’t send your request just now. Try again in a moment.";
+  "We couldn’t add you just now. Please try again in a moment.";
 
-/** Pilot request form. `website` is a honeypot: real people never see or fill it. */
+function dimensions(w: number, h: number) {
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1) {
+    return null;
+  }
+  return {
+    w: Math.min(Math.round(w), 20_000),
+    h: Math.min(Math.round(h), 20_000),
+  };
+}
+
+function collectTelemetry(shownAt: number | null) {
+  const params = new URLSearchParams(window.location.search);
+  const utm: Record<string, string> = {};
+  for (const key of ["source", "medium", "campaign", "term", "content"]) {
+    const value = params.get(`utm_${key}`);
+    if (value) utm[key] = value.slice(0, 100);
+  }
+  let timezone: string | null = null;
+  try {
+    timezone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone?.slice(0, 64) || null;
+  } catch {
+    // Locale data can be unavailable in privacy-restricted browsers.
+  }
+  const dpr = window.devicePixelRatio;
+  return {
+    referrer: document.referrer ? document.referrer.slice(0, 300) : null,
+    landingPath: window.location.pathname.slice(0, 200),
+    utm,
+    timezone,
+    language: navigator.language?.slice(0, 35) || null,
+    screen: dimensions(window.screen.width, window.screen.height),
+    viewport: dimensions(window.innerWidth, window.innerHeight),
+    dpr: Number.isFinite(dpr) && dpr > 0 ? Math.min(dpr, 10) : null,
+    timeToSubmitMs:
+      shownAt === null
+        ? null
+        : Math.min(Math.max(Date.now() - shownAt, 0), 24 * 60 * 60 * 1000),
+  };
+}
+
+/** Email-first waitlist form with optional design-partner qualification. */
 export function WaitlistForm({
   className,
-  buttonLabel = "Request a pilot",
+  buttonLabel = "Join the waitlist",
 }: {
   className?: string;
   buttonLabel?: string;
@@ -27,15 +68,27 @@ export function WaitlistForm({
   const companyId = `${uid}-company`;
   const roleId = `${uid}-role`;
   const workflowId = `${uid}-workflow`;
+  const pilotDetailsId = `${uid}-pilot-details`;
   const noteId = `${uid}-note`;
   const messageId = `${uid}-message`;
+  const shownAt = useRef<number | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [showPilotDetails, setShowPilotDetails] = useState(false);
+  const [submittedForPilot, setSubmittedForPilot] = useState(false);
+
+  useEffect(() => {
+    shownAt.current = Date.now();
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (status === "loading") return;
     const form = new FormData(event.currentTarget);
+    const company = String(form.get("company") ?? "").trim();
+    const role = String(form.get("role") ?? "");
+    const workflow = String(form.get("workflow") ?? "").trim();
+    const hasPilotDetails = Boolean(company || role || workflow);
 
     setStatus("loading");
     setMessage("");
@@ -45,14 +98,16 @@ export function WaitlistForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: String(form.get("email") ?? "").trim(),
-          company: String(form.get("company") ?? "").trim(),
-          role: String(form.get("role") ?? ""),
-          workflow: String(form.get("workflow") ?? "").trim(),
-          source: "landing-pilot",
+          company,
+          role,
+          workflow,
+          source: hasPilotDetails ? "landing-pilot" : "landing-waitlist",
           website: String(form.get("website") ?? ""),
+          client: collectTelemetry(shownAt.current),
         }),
       });
       if (res.ok) {
+        setSubmittedForPilot(hasPilotDetails);
         setStatus("success");
         return;
       }
@@ -72,10 +127,13 @@ export function WaitlistForm({
           className,
         )}
       >
-        <p className="font-display text-xl font-semibold">Request received.</p>
+        <p className="font-display text-xl font-semibold">
+          {submittedForPilot ? "Request received." : "You’re on the list."}
+        </p>
         <p className="mt-2 text-sm leading-relaxed text-sb-soft">
-          A founder will review the details and email you if your workflow fits
-          the current pilot scope.
+          {submittedForPilot
+            ? "A founder will review your optional pilot details and follow up if there’s a fit."
+            : "We’ll email you when early access opens. No account has been created."}
         </p>
       </div>
     );
@@ -84,18 +142,18 @@ export function WaitlistForm({
   const busy = status === "loading";
   const failed = status === "error";
   const fieldClass =
-    "mt-2 min-h-12 w-full rounded-lg border border-sb-ink/30 bg-sb-surface px-4 text-base text-sb-ink outline-none placeholder:text-sb-soft/70 focus-visible:border-sb-focus focus-visible:ring-3 focus-visible:ring-sb-focus/40 disabled:cursor-not-allowed disabled:opacity-60";
+    "min-h-12 w-full rounded-lg border border-sb-ink/35 bg-sb-surface px-4 text-base text-sb-ink outline-none placeholder:text-sb-soft focus-visible:border-sb-focus focus-visible:ring-3 focus-visible:ring-sb-focus/40 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
-    <form onSubmit={onSubmit} className={cn("space-y-5", className)}>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label
-            htmlFor={emailId}
-            className="block text-sm font-medium text-sb-ink"
-          >
-            Work email <span aria-hidden="true">*</span>
-          </label>
+    <form onSubmit={onSubmit} className={cn("space-y-4", className)}>
+      <div>
+        <label
+          htmlFor={emailId}
+          className="block text-sm font-semibold text-sb-ink"
+        >
+          Email address
+        </label>
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           <input
             id={emailId}
             name="email"
@@ -108,78 +166,111 @@ export function WaitlistForm({
             disabled={busy}
             aria-invalid={failed || undefined}
             aria-describedby={`${noteId} ${messageId}`}
-            className={fieldClass}
+            className={cn(fieldClass, "sm:flex-1")}
           />
-        </div>
-        <div>
-          <label
-            htmlFor={companyId}
-            className="block text-sm font-medium text-sb-ink"
-          >
-            Company <span aria-hidden="true">*</span>
-          </label>
-          <input
-            id={companyId}
-            name="company"
-            type="text"
-            required
-            maxLength={120}
-            autoComplete="organization"
-            placeholder="Acme"
+          <Button
+            type="submit"
             disabled={busy}
-            aria-invalid={failed || undefined}
-            aria-describedby={messageId}
-            className={fieldClass}
-          />
+            className="h-12 shrink-0 rounded-lg bg-sb-ink px-6 text-base font-semibold text-sb-paper hover:bg-sb-ink/85 focus-visible:border-sb-focus focus-visible:ring-sb-focus/50"
+          >
+            {busy ? "Joining…" : buttonLabel}
+          </Button>
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor={roleId}
-          className="block text-sm font-medium text-sb-ink"
+      <div className="rounded-lg border border-sb-line bg-sb-surface [overflow-anchor:none]">
+        <button
+          type="button"
+          aria-expanded={showPilotDetails}
+          aria-controls={pilotDetailsId}
+          onClick={() => setShowPilotDetails((shown) => !shown)}
+          className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-lg px-4 py-3 text-left text-sm font-semibold text-sb-ink outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/40"
         >
-          Your role <span aria-hidden="true">*</span>
-        </label>
-        <select
-          id={roleId}
-          name="role"
-          required
-          defaultValue=""
-          disabled={busy}
-          aria-invalid={failed || undefined}
-          aria-describedby={messageId}
-          className={cn(fieldClass, "appearance-none")}
+          Interested in a design-partner pilot? Add details
+          <span
+            aria-hidden="true"
+            className={cn(
+              "text-lg font-normal text-sb-soft transition-transform duration-300 motion-reduce:transition-none",
+              showPilotDetails && "rotate-45",
+            )}
+          >
+            +
+          </span>
+        </button>
+        <div
+          id={pilotDetailsId}
+          aria-hidden={!showPilotDetails}
+          inert={!showPilotDetails}
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+            showPilotDetails ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
         >
-          <option value="" disabled>
-            Select the closest match
-          </option>
-          <option value="founder">Founder or executive</option>
-          <option value="support">Support or success</option>
-          <option value="engineering">Engineering or QA</option>
-          <option value="product">Product</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      <div>
-        <label
-          htmlFor={workflowId}
-          className="block text-sm font-medium text-sb-ink"
-        >
-          How do customer bug reports reach engineering today?{" "}
-          <span className="font-normal text-sb-soft">(optional)</span>
-        </label>
-        <textarea
-          id={workflowId}
-          name="workflow"
-          rows={4}
-          maxLength={600}
-          disabled={busy}
-          aria-describedby={`${noteId} ${messageId}`}
-          placeholder="For example: customers message support in Intercom, then support rewrites the report in Linear and asks for missing steps."
-          className={cn(fieldClass, "resize-y py-3")}
-        />
+          <div className="overflow-hidden">
+            <div className="grid gap-4 border-t border-sb-line p-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor={companyId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  Company{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <input
+                  id={companyId}
+                  name="company"
+                  type="text"
+                  maxLength={120}
+                  autoComplete="organization"
+                  placeholder="Acme"
+                  disabled={busy}
+                  className={cn(fieldClass, "mt-2")}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={roleId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  Your role{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <select
+                  id={roleId}
+                  name="role"
+                  defaultValue=""
+                  disabled={busy}
+                  className={cn(fieldClass, "mt-2 appearance-none")}
+                >
+                  <option value="">Select a role</option>
+                  <option value="founder">Founder or executive</option>
+                  <option value="support">Support or success</option>
+                  <option value="engineering">Engineering or QA</option>
+                  <option value="product">Product</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor={workflowId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  How do bug reports reach engineering?{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <textarea
+                  id={workflowId}
+                  name="workflow"
+                  rows={3}
+                  maxLength={600}
+                  disabled={busy}
+                  placeholder="For example: support rewrites Intercom messages in Linear."
+                  className={cn(fieldClass, "mt-2 resize-y py-3")}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div
@@ -198,18 +289,11 @@ export function WaitlistForm({
         </label>
       </div>
 
-      <Button
-        type="submit"
-        disabled={busy}
-        className="h-12 w-full rounded-lg bg-sb-mark px-6 text-base font-semibold text-[#11162b] hover:bg-sb-mark/85 focus-visible:border-sb-focus focus-visible:ring-sb-focus/50"
-      >
-        {busy ? "Sending request…" : buttonLabel}
-      </Button>
-
       <p id={noteId} className="text-xs leading-relaxed text-sb-soft">
-        We use these details to evaluate pilot fit and contact you about this
-        request. For abuse prevention, the service stores a salted hash of your
-        IP address—not the raw address.
+        Email is the only required field. We also store page and campaign
+        referral, language/timezone, browser/device, screen/viewport size,
+        time-to-submit, and coarse location data to understand interest and
+        prevent abuse. Raw IP addresses are not stored.
       </p>
       <p
         id={messageId}

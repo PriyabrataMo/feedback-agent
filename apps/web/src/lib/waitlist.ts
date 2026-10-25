@@ -2,8 +2,8 @@ import { createHmac } from "node:crypto";
 import "server-only";
 import { getDb } from "@/lib/mongo";
 import {
-  pilotRequestDocumentSchema,
-  type PilotRequestDocument,
+  waitlistDocumentSchema,
+  type WaitlistDocument,
 } from "@/lib/waitlist-schema";
 
 const RATE_PER_MINUTE = 5;
@@ -57,27 +57,38 @@ export async function isRateLimited(ipHash: string | null): Promise<boolean> {
   return false;
 }
 
-type SavePilotRequest = Pick<
-  PilotRequestDocument,
-  "email" | "company" | "role" | "workflow" | "source" | "ipHash"
->;
+type SaveWaitlistEntry = Pick<
+  WaitlistDocument,
+  "email" | "client" | "request" | "source" | "ipHash"
+> &
+  Pick<WaitlistDocument, "company" | "role" | "workflow">;
 
-/** Insert a lead or update qualification details when an email-only lead returns. */
-export async function savePilotRequest(
-  request: SavePilotRequest,
+/** Insert a signup and enrich it when the same person later adds optional pilot details. */
+export async function saveWaitlistEntry(
+  request: SaveWaitlistEntry,
 ): Promise<void> {
   await ensureIndexes();
   const now = new Date();
-  const document = pilotRequestDocumentSchema.parse({
+  const document = waitlistDocumentSchema.parse({
     ...request,
     emailDomain: request.email.split("@")[1] ?? "",
     createdAt: now,
     lastSeenAt: now,
     submitCount: 1,
   });
-  const collection = (await getDb()).collection<PilotRequestDocument>(
-    "waitlist",
-  );
+  const collection = (await getDb()).collection<WaitlistDocument>("waitlist");
+  const updates: Partial<WaitlistDocument> = {
+    client: document.client,
+    request: document.request,
+    source: document.source,
+    ipHash: document.ipHash,
+    lastSeenAt: document.lastSeenAt,
+  };
+  // An email-only signup must not erase qualification supplied on an earlier visit.
+  if (document.company) updates.company = document.company;
+  if (document.role) updates.role = document.role;
+  if (document.workflow) updates.workflow = document.workflow;
+
   try {
     await collection.updateOne(
       { email: document.email },
@@ -87,14 +98,7 @@ export async function savePilotRequest(
           emailDomain: document.emailDomain,
           createdAt: document.createdAt,
         },
-        $set: {
-          company: document.company,
-          role: document.role,
-          workflow: document.workflow,
-          source: document.source,
-          ipHash: document.ipHash,
-          lastSeenAt: document.lastSeenAt,
-        },
+        $set: updates,
         $inc: { submitCount: 1 },
       },
       { upsert: true },

@@ -85,7 +85,7 @@ export async function renderOgImage() {
         }}
       >
         <div>showbugai.com</div>
-        <div style={{ color: "#ffa63d" }}>Request a pilot</div>
+        <div style={{ color: "#ffa63d" }}>Join the waitlist</div>
       </div>
     </div>,
     {
