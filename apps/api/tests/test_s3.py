@@ -92,10 +92,10 @@ def test_delete(s3):
 def test_key_prefix_applied_and_stripped():
     with mock_aws():
         boto3.client("s3", region_name=REGION).create_bucket(Bucket=BUCKET)
-        st = S3Storage.managed(BUCKET, region=REGION, key_prefix="feedback-agent")
+        st = S3Storage.managed(BUCKET, region=REGION, key_prefix="showbug")
         run(st.put_object("p/s/1", b"x", "text/plain"))
         raw = boto3.client("s3", region_name=REGION).list_objects_v2(Bucket=BUCKET)["Contents"]
-        assert [o["Key"] for o in raw] == ["feedback-agent/p/s/1"]
+        assert [o["Key"] for o in raw] == ["showbug/p/s/1"]
         assert run(st.list("p")) == ["p/s/1"]
         assert run(st.list("")) == ["p/s/1"]
 
@@ -174,9 +174,9 @@ def test_test_connection_failure_access_denied():
 BYOB = ByobConfig(
     bucket=BUCKET,
     region=REGION,
-    role_arn="arn:aws:iam::123456789012:role/FeedbackAgentAccess",
+    role_arn="arn:aws:iam::123456789012:role/ShowbugAccess",
     external_id="ext-secret-123",
-    key_prefix="feedback-agent",
+    key_prefix="showbug",
 )
 
 
@@ -197,7 +197,7 @@ def test_byob_assume_role_roundtrip():
                 "Contents"
             ]
         ]
-        assert keys == ["feedback-agent/p/s/1"]
+        assert keys == ["showbug/p/s/1"]
         # presigned URLs are signed by the temporary credentials
         q = parse_qs(urlparse(run(st.presign_get("p/s/1", expires_in_sec=60))).query)
         assert "X-Amz-Security-Token" in q
@@ -228,7 +228,7 @@ def test_byob_passes_external_id_and_caches_credentials():
     assert len(sts.calls) == 1
     assert sts.calls[0]["ExternalId"] == "ext-secret-123"
     assert sts.calls[0]["RoleArn"] == BYOB.role_arn
-    assert sts.calls[0]["RoleSessionName"].startswith("feedback-agent-")
+    assert sts.calls[0]["RoleSessionName"].startswith("showbug-")
 
 
 def test_byob_refreshes_credentials_near_expiry():

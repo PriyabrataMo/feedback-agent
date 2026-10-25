@@ -32,7 +32,7 @@ class ByobConfig:
     region: str
     role_arn: str
     external_id: str
-    # Prefix the customer's role is scoped to (e.g. "feedback-agent"); applied to every key.
+    # Prefix the customer's role is scoped to (e.g. "showbug"); applied to every key.
     key_prefix: str = ""
     # S3-compatible stores only (MinIO, R2); AWS S3 leaves this unset.
     endpoint_url: str | None = None
@@ -62,7 +62,7 @@ class _AssumedRoleClient:
     def _build(self) -> tuple[Any, float]:
         resp = self._sts_factory().assume_role(
             RoleArn=self._byob.role_arn,
-            RoleSessionName=f"feedback-agent-{uuid.uuid4().hex[:12]}",
+            RoleSessionName=f"showbug-{uuid.uuid4().hex[:12]}",
             ExternalId=self._byob.external_id,
             DurationSeconds=_ASSUME_ROLE_DURATION_SEC,
         )

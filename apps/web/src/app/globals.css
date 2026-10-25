@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -46,6 +46,17 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Showbug landing page tokens (defined below, light + dark) */
+  --color-sb-paper: var(--sb-paper);
+  --color-sb-surface: var(--sb-surface);
+  --color-sb-ink: var(--sb-ink);
+  --color-sb-soft: var(--sb-soft);
+  --color-sb-line: var(--sb-line);
+  --color-sb-mark: var(--sb-mark);
+  --color-sb-rec: var(--sb-rec);
+  --color-sb-focus: var(--sb-focus);
+  --font-display: var(--font-display);
 }
 
 :root {
@@ -126,5 +137,95 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ---- Showbug landing page ---- */
+:root {
+  --sb-paper: #f3f4f9;
+  --sb-surface: #ffffff;
+  --sb-ink: #11162b;
+  --sb-soft: #474e6e;
+  --sb-line: #d7dae8;
+  --sb-mark: #ffa63d;
+  --sb-rec: #d92d3a;
+  --sb-focus: #2456e6;
+}
+
+/* Follows the OS unless the visitor picked a theme (data-theme on <html>, set by the toggle). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sb-paper: #0b0f1e;
+    --sb-surface: #141a30;
+    --sb-ink: #eceffa;
+    --sb-soft: #a6aecb;
+    --sb-line: #283050;
+    --sb-mark: #ffb454;
+    --sb-rec: #ff7077;
+    --sb-focus: #7fa2ff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --sb-paper: #0b0f1e;
+  --sb-surface: #141a30;
+  --sb-ink: #eceffa;
+  --sb-soft: #a6aecb;
+  --sb-line: #283050;
+  --sb-mark: #ffb454;
+  --sb-rec: #ff7077;
+  --sb-focus: #7fa2ff;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Paint the page background behind overscroll/bounce too, not just the content box. */
+html:has(.sb-page) {
+  background-color: var(--sb-paper);
+}
+
+/* The "bug" in the hero is drawn as a devtools-style inspector box. */
+.sb-inspect {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.12em;
+  margin: 0 0.03em 0 -0.04em;
+  isolation: isolate;
+}
+.sb-inspect::before {
+  content: "";
+  position: absolute;
+  inset: 0.06em -0.02em 0.02em;
+  background: color-mix(in oklch, var(--sb-mark) 32%, transparent);
+  outline: 2px solid var(--sb-mark);
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sb-inspect::before {
+    transform-origin: left center;
+    animation: sb-draw 700ms 250ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .sb-rec-dot {
+    animation: sb-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes sb-draw {
+    from {
+      transform: scaleX(0);
+      opacity: 0;
+    }
+    to {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+  }
+  @keyframes sb-pulse {
+    50% {
+      opacity: 0.35;
+    }
   }
 }

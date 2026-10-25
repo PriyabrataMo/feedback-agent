@@ -21,7 +21,7 @@ from .render import build_draft
 from .settings import TicketSettings
 from .summarize import build_facts, summarize
 
-log = logging.getLogger("feedback_api.worker")
+log = logging.getLogger("showbug_api.worker")
 
 DRAIN_TIMEOUT = 10.0
 

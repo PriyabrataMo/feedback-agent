@@ -17,7 +17,7 @@ const publicKey = script?.dataset.key;
 const scriptUrl = script?.src ? new URL(script.src) : null;
 
 if (!publicKey || !scriptUrl) {
-  console.warn("[feedback-agent] missing data-key on the script tag");
+  console.warn("[showbug] missing data-key on the script tag");
 } else {
   // The API lives on its own origin (FastAPI); data-api overrides the default of the script's own origin.
   const apiBase = script?.dataset.api?.replace(/\/$/, "") || scriptUrl.origin;
@@ -27,7 +27,7 @@ if (!publicKey || !scriptUrl) {
   );
 
   let user: EndUser | null = null;
-  (window as any).FeedbackAgent = {
+  (window as any).Showbug = {
     identify(u: EndUser) {
       user = u;
     },

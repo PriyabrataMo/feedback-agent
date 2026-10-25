@@ -45,13 +45,13 @@ BYOB role ARN, ExternalId, bucket, region and prefix are per project (`ByobConfi
       "Sid": "ObjectAccess",
       "Effect": "Allow",
       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::feedback-agent-media/*"
+      "Resource": "arn:aws:s3:::showbug-media/*"
     },
     {
       "Sid": "ListBucket",
       "Effect": "Allow",
       "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::feedback-agent-media"
+      "Resource": "arn:aws:s3:::showbug-media"
     }
   ]
 }
@@ -113,11 +113,11 @@ Replace `OUR_ACCOUNT_ID` with the AWS account (or the specific role ARN) the API
 }
 ```
 
-Tighter: use `arn:aws:iam::OUR_ACCOUNT_ID:role/feedback-api` as the principal so only the API role can assume it. The API's own role needs `sts:AssumeRole` on `*` (or on the customer role ARNs).
+Tighter: use `arn:aws:iam::OUR_ACCOUNT_ID:role/showbug-api` as the principal so only the API role can assume it. The API's own role needs `sts:AssumeRole` on `*` (or on the customer role ARNs).
 
 ### Permissions policy (on the customer's role)
 
-Scoped to the prefix the customer chose (here `feedback-agent/`):
+Scoped to the prefix the customer chose (here `showbug/`):
 
 ```json
 {
@@ -126,13 +126,13 @@ Scoped to the prefix the customer chose (here `feedback-agent/`):
     {
       "Effect": "Allow",
       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-      "Resource": "arn:aws:s3:::CUSTOMER_BUCKET/feedback-agent/*"
+      "Resource": "arn:aws:s3:::CUSTOMER_BUCKET/showbug/*"
     },
     {
       "Effect": "Allow",
       "Action": "s3:ListBucket",
       "Resource": "arn:aws:s3:::CUSTOMER_BUCKET",
-      "Condition": { "StringLike": { "s3:prefix": ["feedback-agent/*"] } }
+      "Condition": { "StringLike": { "s3:prefix": ["showbug/*"] } }
     }
   ]
 }
@@ -148,9 +148,9 @@ The onboarding wizard should emit this as CloudFormation/Terraform too (not buil
 ByobConfig(
     bucket="CUSTOMER_BUCKET",
     region="eu-west-1",
-    role_arn="arn:aws:iam::CUSTOMER_ACCOUNT:role/FeedbackAgentAccess",
+    role_arn="arn:aws:iam::CUSTOMER_ACCOUNT:role/ShowbugAccess",
     external_id="<per-project secret>",
-    key_prefix="feedback-agent",   # must match the policy prefix
+    key_prefix="showbug",   # must match the policy prefix
 )
 ```
 

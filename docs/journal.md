@@ -2,9 +2,11 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
-## 2026-10-24 — Full console and fetch/XHR diagnostic metadata
-- Expanded the passive SDK collector from warnings/errors and failed fetches to all console levels and every completed `fetch`/XHR request. Each network entry contains only type, method, origin + path, status, duration, and timestamp; the SDK's own requests, headers, cookies, query/hash values, and request/response bodies are excluded. *Why:* successful requests and informational logs often explain the lead-up to a bug, while raw traffic would create a disproportionate credential/PII risk.
-- Both streams use 100-entry rolling buffers and the old error-only lists remain available for ticket generation and the replay timeline. During an active recording, every new diagnostic is additionally written as an rrweb custom event and uploaded in the existing five-second batches; the API re-shapes and caps the rolling entries before storing session context. *Why:* preserve the complete recorded-session trail plus recent pre-session context, while retaining compatibility and keeping the end-session request bounded.
+## 2026-10-25 — Renamed the product to Showbug
+- Decision: "Feedback Agent" (a placeholder) becomes **Showbug**; domain `showbugai.com` is bought. *Why:* short and brandable, "show the bug" works as a verb, and it matches the core idea of the user showing their screen and talking through the problem.
+- Renamed: README title/status, root workspace (`showbug`) and `@showbug/sdk` (build filter), `apps/api` Python project (`showbug-api`), FastAPI title, logger names (`showbug_api*`), SDK global (`window.Showbug`) and `[showbug]` console prefixes, ticket footer ("Created automatically by Showbug"), realtime agent prompt, S3 example/test key prefix and role names (`showbug`, `ShowbugAccess`, `showbug-api`, `showbug-media`) in docs and tests, `docs/mvp-security-plan.md` title. The SDK bundle was rebuilt. No env var or storage default embedded the old name, so no fallbacks were needed.
+- Deliberately left: GitHub repo name and local folder (`feedback-agent`), git history, `docs/idea.md` and older journal entries (historical), generic "feedback" wording (ticket title prefix `[Feedback]`, the `X-Feedback-*` webhook headers, which are wire contract; consider renaming before any customer integrates).
+- Manual follow-ups: rename the GitHub repo, create real S3 buckets/IAM roles under the new names if any were already provisioned, and point `showbugai.com` DNS when deploying.
 
 ## 2026-10-24 — Unified Python and Next.js quality gates
 - Added Ruff formatting/linting, mypy, Prettier, stricter ESLint scripts, EditorConfig, VS Code recommendations, staged-file linting, and Conventional Commit validation, based on the `ncert-helper-agent` setup.

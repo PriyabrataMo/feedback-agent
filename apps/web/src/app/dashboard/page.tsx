@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { listSessions } from "@/lib/api";
 
-export const metadata = { title: "Sessions" };
+export const metadata = { title: "Sessions", robots: { index: false } };
 
 async function SessionsTable() {
   const sessions = await listSessions();
@@ -62,7 +62,7 @@ export default function DashboardPage() {
     <main className="mx-auto max-w-5xl p-10">
       <Card>
         <CardHeader>
-          <CardTitle>Feedback sessions</CardTitle>
+          <CardTitle>Showbug sessions</CardTitle>
         </CardHeader>
         <CardContent>
           <Suspense

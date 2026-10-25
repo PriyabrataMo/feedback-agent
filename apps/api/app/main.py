@@ -11,9 +11,10 @@ from .projects import ProjectRegistry, dev_registry
 from .realtime import RealtimeProvider
 from .realtime.mock import MockProvider
 from .realtime.openai import OpenAIProvider
-from .routes import admin, sdk, storage
+from .routes import admin, sdk, storage, waitlist
 from .sessions import SessionStore
 from .storage import LocalStorage
+from .waitlist import RateLimiter, WaitlistStore
 from .worker import TicketSettings, TicketWorker
 
 
@@ -39,13 +40,15 @@ def create_app(
         if ticket_client is None:
             await ticket_http.aclose()
 
-    app = FastAPI(title="Feedback Agent API", lifespan=lifespan)
+    app = FastAPI(title="Showbug API", lifespan=lifespan)
     settings.data_dir.mkdir(parents=True, exist_ok=True)
 
     app.state.settings = settings
-    app.state.log = logging.getLogger("feedback_api")
+    app.state.log = logging.getLogger("showbug_api")
     app.state.projects = projects or dev_registry()
     app.state.store = SessionStore(str(settings.data_dir / "sessions.db"))
+    app.state.waitlist = WaitlistStore(str(settings.data_dir / "sessions.db"))
+    app.state.waitlist_limiter = RateLimiter()
     app.state.local_storage = LocalStorage(
         settings.data_dir / "objects", settings.dev_storage_secret
     )
@@ -89,4 +92,5 @@ def create_app(
     app.include_router(sdk.router)
     app.include_router(storage.router)
     app.include_router(admin.router)
+    app.include_router(waitlist.router)
     return app

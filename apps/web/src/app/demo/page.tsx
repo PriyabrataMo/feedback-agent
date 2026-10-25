@@ -1,7 +1,10 @@
 import Script from "next/script";
 import { DemoActions } from "./demo-actions";
 
-export const metadata = { title: "Acme Billing (demo host app)" };
+export const metadata = {
+  title: "Acme Billing (Showbug demo host app)",
+  robots: { index: false },
+};
 
 /** A stand-in "customer SaaS" that embeds the SDK exactly as a real customer would. */
 export default function DemoPage() {
@@ -9,8 +12,9 @@ export default function DemoPage() {
     <main className="mx-auto max-w-3xl space-y-6 p-10">
       <h1 className="text-2xl font-semibold">Acme Billing</h1>
       <p className="text-muted-foreground">
-        Pretend this is a customer&apos;s product. Break something, then click
-        &ldquo;Report a problem&rdquo; (bottom right) and describe it out loud.
+        Pretend this is a customer&apos;s product with Showbug embedded. Break
+        something, then click &ldquo;Report a problem&rdquo; (bottom right) and
+        describe it out loud.
       </p>
       <DemoActions />
       <label className="block space-y-1 text-sm">

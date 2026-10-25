@@ -19,7 +19,7 @@ from ..tickets.base import SEVERITIES
 from ..tickets.sanitize import clean_block, clean_line, clean_url
 from .settings import TicketSettings
 
-log = logging.getLogger("feedback_api.worker")
+log = logging.getLogger("showbug_api.worker")
 
 MAX_TITLE = 120
 MAX_SUMMARY = 1200
