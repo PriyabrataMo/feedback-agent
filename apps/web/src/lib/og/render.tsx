@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const OG_SIZE = { width: 1200, height: 630 };
-export const OG_ALT = "Showbug: show the bug, skip the back-and-forth";
+export const OG_ALT =
+  "Showbug, an AI bug reporting widget that asks useful follow-up questions";
 
 const fontDir = join(process.cwd(), "src/lib/og");
 const display = readFile(join(fontDir, "bricolage-800.ttf"));
@@ -59,7 +60,7 @@ export async function renderOgImage() {
             letterSpacing: -4,
           }}
         >
-          <div style={{ display: "flex", marginRight: 28 }}>Show the</div>
+          <div style={{ display: "flex", marginRight: 28 }}>Better bug</div>
           <div
             style={{
               display: "flex",
@@ -68,11 +69,11 @@ export async function renderOgImage() {
               padding: "0 18px",
             }}
           >
-            bug.
+            reports.
           </div>
         </div>
         <div style={{ fontSize: 38, color: "#a6aecb", maxWidth: 880 }}>
-          Talk to a voice agent. Developers get the ticket and the recording.
+          Ask for missing context while the customer is still there.
         </div>
       </div>
       <div
@@ -84,7 +85,7 @@ export async function renderOgImage() {
         }}
       >
         <div>showbugai.com</div>
-        <div style={{ color: "#ffa63d" }}>Join the waitlist</div>
+        <div style={{ color: "#ffa63d" }}>Request a pilot</div>
       </div>
     </div>,
     {

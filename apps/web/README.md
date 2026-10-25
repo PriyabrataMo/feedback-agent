@@ -6,8 +6,8 @@ Next.js 16 app (Cache Components) for showbugai.com: the waitlist landing page (
 bun run dev      # http://localhost:3000
 ```
 
-## Waitlist
+## Pilot request
 
-`/` posts `{ email, source: "landing", website }` to the same-origin route handler `src/app/api/waitlist/route.ts`, which validates the email and forwards it server-side to `${SHOWBUG_API_URL}/v1/waitlist` (default `http://localhost:8000`) with the client's `x-forwarded-for`. `website` is a honeypot field. Responses: `200 {ok:true}`, `422 invalid_email`, `429 rate_limited`, `502 unavailable`.
+`/` posts `{ email, company, role, workflow, source, website }` to the same-origin route handler `src/app/api/waitlist/route.ts`. `website` is a honeypot field. The route uses Zod for its runtime/TypeScript schema, applies a MongoDB-backed rate limit, and upserts the qualified request into MongoDB. It retains real error states: `200 {ok:true}`, `413 request_too_large`, `422 invalid_request`, `429 rate_limited`, `502 unavailable`.
 
-Copy `.env.example` to `.env.local` to override `SHOWBUG_API_URL` / `NEXT_PUBLIC_API_URL`.
+Configure `MONGODB_URI` and a long random `WAITLIST_IP_SALT` in the web deployment. `MONGODB_DB` defaults to `showbug`. `NEXT_PUBLIC_API_URL` is used only by the local SDK demo.

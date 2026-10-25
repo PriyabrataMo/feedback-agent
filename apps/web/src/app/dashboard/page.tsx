@@ -12,7 +12,10 @@ import {
 } from "@/components/ui/table";
 import { listSessions } from "@/lib/api";
 
-export const metadata = { title: "Sessions", robots: { index: false } };
+export const metadata = {
+  title: "Sessions",
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 async function SessionsTable() {
   const sessions = await listSessions();

@@ -3,94 +3,118 @@ import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { WaitlistForm } from "@/components/landing/waitlist-form";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
-const steps = [
+const workflow = [
   {
-    title: "Add one script tag",
-    body: "Drop the Showbug snippet into your app. It adds a small report button and loads the rest only when someone clicks it.",
+    actor: "Your team",
+    title: "Embed the reporting button",
+    body: "Add the Showbug loader to your web app. The heavier session code loads only after someone opens the widget.",
     detail: '<script src="…/loader.js" data-key="pk_…">',
   },
   {
-    title: "The user shows and tells",
-    body: "They click the button and the browser asks for screen and mic access. A voice agent asks what went wrong, then follows up on whatever is still unclear while they point at it on screen.",
-    detail: "“Does it happen on every invoice?”",
+    actor: "Your customer",
+    title: "Show and describe the problem",
+    body: "The customer chooses a browser tab, approves screen and microphone access, and explains what went wrong in their own words.",
+    detail: "The browser permission prompt is always visible.",
   },
   {
-    title: "Your developers get a ticket",
-    body: "Capture stops when the user is done. The session becomes a ticket for your tracker, with the recording and the context attached.",
-    detail: "Linear · Jira · webhook (planned)",
-  },
-];
-
-const ticketParts = [
-  {
-    label: "Summary",
-    body: "What broke and where, in a sentence or two.",
+    actor: "Showbug",
+    title: "Ask for what is missing",
+    body: "The assistant can ask about the expected result, frequency, or last action while the customer and the broken state are still available.",
+    detail: "“What did you expect after clicking Export?”",
   },
   {
-    label: "Repro steps",
-    body: "Built from the user's clicks, page changes and what they said.",
-  },
-  {
-    label: "Expected vs. actual",
-    body: "As the reporter described it, with the follow-up questions already asked.",
-  },
-  {
-    label: "Page and user",
-    body: "URL, browser, and who they were if your app identifies them.",
-  },
-  {
-    label: "Console and network",
-    body: "Recent console errors and failed requests, length-limited.",
-  },
-  {
-    label: "Recording",
-    body: "Screen and voice with a transcript, plus a replay of the page in the dashboard.",
+    actor: "Your team",
+    title: "Review one organized report",
+    body: "The prototype brings the conversation, recording, replay, browser context, and selected diagnostics into a structured draft.",
+    detail: "A review-before-delivery gate is being prepared for pilots.",
   },
 ];
 
-const audiences = [
+const reportParts = [
   {
-    who: "SaaS teams with a browser app and signed-in users",
-    why: "The first pilots target teams of roughly 5 to 50 engineers who lose hours asking customers what they were doing when it broke.",
+    label: "Problem summary",
+    body: "What the customer tried, what happened, and what they expected—when the conversation provides it.",
   },
   {
-    who: "Support and QA who relay bug reports",
-    why: "Stop forwarding “it's broken” with a screenshot. The follow-up questions get asked while the reporter is still on the page.",
+    label: "Suggested reproduction steps",
+    body: "A draft derived from the customer’s words and recent clicks, clearly marked for verification.",
   },
   {
-    who: "Engineers who reproduce bugs from a one-line message",
-    why: "Open the ticket, watch what happened, read the console error, and start on the fix.",
+    label: "Page and browser context",
+    body: "The page path, browser details, and pseudonymous user or account context when your app supplies it.",
+  },
+  {
+    label: "Selected diagnostics",
+    body: "Bounded console errors and failed-request metadata. Request headers and bodies are not collected.",
+  },
+  {
+    label: "Conversation transcript",
+    body: "The customer’s explanation and the assistant’s follow-up questions in one timeline.",
+  },
+  {
+    label: "Recording and DOM replay",
+    body: "Two different views of the session, with different privacy properties and capture limits.",
+  },
+];
+
+const statusRows = [
+  {
+    status: "Working prototype",
+    tone: "ready",
+    body: "Embeddable widget, explicit screen and mic capture, live voice follow-ups, transcript, recording, DOM replay, diagnostics, and structured draft generation.",
+  },
+  {
+    status: "Implemented; validation left",
+    tone: "testing",
+    body: "Linear and signed-webhook delivery adapters are covered by automated tests, but have not been verified with an external pilot customer.",
+  },
+  {
+    status: "Before external pilots",
+    tone: "building",
+    body: "Review and approval, authenticated tenant access, deletion and retention controls, production storage, and remaining security hardening.",
+  },
+  {
+    status: "Not supported yet",
+    tone: "later",
+    body: "Jira or GitHub delivery, mobile reporting, Safari and Firefox, complete pixel redaction, regulated-data use cases, and self-serve signup.",
   },
 ];
 
 const faqs = [
   {
-    q: "Does it record without asking?",
-    a: "No. Nothing is captured until the user clicks the button and then approves the browser's own screen-share and microphone prompts. They choose what to share, and they can stop sharing at any time.",
+    q: "How much work is installation?",
+    a: "The current prototype starts with one loader script and a project key. A pilot also needs an allowed-domain setup and agreement on where the button appears. We will scope that setup with each design partner rather than promise a one-click production rollout.",
   },
   {
-    q: "What about passwords, card numbers and other sensitive data?",
-    a: "Form inputs are masked in the page replay, and anything you mark with data-private is left out of replay and click capture. The screen recording is different: it contains whatever pixels are on screen, and masking the page does not hide those. Pixel-level redaction is not built yet, so we advise keeping Showbug off pages that show payment, health, banking or credential data.",
+    q: "What does the customer have to do?",
+    a: "They open the widget, read the capture notice, and approve the browser’s screen-share and microphone prompts. They choose the tab to share and can stop at any time. Showbug cannot record silently or bypass those browser permissions.",
   },
   {
-    q: "Who else sees the audio and the screen?",
-    a: "The voice agent runs on a third-party realtime AI provider, so microphone audio and screen frames are sent to it during the conversation. Today that is OpenAI's Realtime API.",
+    q: "Does this replace our support tool or issue tracker?",
+    a: "No. Showbug is intended to improve the handoff into the tools your team already uses. Support can keep the customer conversation, and engineering can keep its tracker; Showbug focuses on collecting missing bug context before the report reaches them.",
   },
   {
-    q: "Which browsers and trackers will it support?",
-    a: "Desktop Chrome first. For tickets, we are building delivery to a webhook and to Linear and Jira. Which ones ship first depends on what the waitlist teams use.",
+    q: "Which browsers and trackers are supported?",
+    a: "The pilot target is desktop Chrome. Linear and signed-webhook delivery are implemented but still need real-customer validation. Jira, GitHub Issues, Safari, Firefox, and mobile are not currently supported pilot claims.",
+  },
+  {
+    q: "What data is captured, and where does it go?",
+    a: "During the prototype conversation, microphone audio and selected screen frames are processed by OpenAI’s Realtime API. Showbug also stores the transcript, recording, DOM replay, page path, and bounded diagnostic metadata. Production retention, deletion, and storage terms are not finalized, so sensitive or regulated routes are excluded from the intended pilots.",
+  },
+  {
+    q: "Are sensitive fields redacted from everything?",
+    a: "No. Form inputs are masked in the DOM replay, and elements marked data-private are excluded from replay and click capture. The screen recording contains the visible pixels in the tab the customer selected. Pixel-level redaction is not built, so payment, health, banking, credential, and secret-management screens are not appropriate for the current product.",
+  },
+  {
+    q: "What happens after I request a pilot?",
+    a: "A founder reviews the request. If your product and workflow fit the current desktop-Chrome, low-sensitivity pilot scope, we will email you to learn how reports move from customers to support and engineering. Submitting the form does not create an account or guarantee access.",
   },
   {
     q: "How much will it cost?",
-    a: "Not decided yet. Every session runs a voice model, so pricing will be based on usage, and we are still measuring what a session costs.",
-  },
-  {
-    q: "What happens when I join the waitlist?",
-    a: "We store your email and use it to tell you when early access opens.",
+    a: "Pricing has not been decided. We are measuring the cost and usefulness of completed reports before setting a plan or publishing a pilot price.",
   },
 ];
 
-// Structured data for search engines. The FAQ entries are the same text rendered on the page.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -109,15 +133,6 @@ const jsonLd = {
       description: SITE_DESCRIPTION,
       inLanguage: "en",
       publisher: { "@id": `${SITE_URL}/#organization` },
-    },
-    {
-      "@type": "FAQPage",
-      "@id": `${SITE_URL}/#faq`,
-      mainEntity: faqs.map((f) => ({
-        "@type": "Question",
-        name: f.q,
-        acceptedAnswer: { "@type": "Answer", text: f.a },
-      })),
     },
   ],
 };
@@ -141,74 +156,168 @@ function Mark({ className }: { className?: string }) {
   );
 }
 
-function ExampleTicket() {
+function Arrow({ className }: { className?: string }) {
   return (
-    <figure className="w-full">
-      <div className="overflow-hidden rounded-xl border border-sb-ink/20 bg-sb-surface shadow-[6px_6px_0_0_var(--sb-ink)]">
-        <div className="flex items-center justify-between border-b border-sb-line bg-sb-paper px-4 py-2.5 font-mono text-xs text-sb-soft">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className={className}
+    >
+      <path
+        d="M4 10h11m-4-4 4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function HeroEvidence() {
+  return (
+    <figure className="relative mx-auto w-full max-w-[34rem] lg:ml-auto">
+      <div className="absolute -inset-3 -z-10 translate-x-2 translate-y-2 rounded-[1.75rem] bg-sb-mark/20" />
+      <div className="overflow-hidden rounded-2xl border border-sb-ink/20 bg-sb-surface shadow-[8px_8px_0_0_var(--sb-ink)]">
+        <div className="flex items-center justify-between border-b border-sb-line bg-sb-paper px-4 py-3 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
           <span className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="sb-rec-dot size-2 rounded-full bg-sb-rec"
-            />
-            recording.webm · 1:12
+            <span className="sb-rec-dot size-2 rounded-full bg-sb-rec" />
+            Report in progress
           </span>
-          <span>example ticket</span>
+          <span>Illustrative flow</span>
         </div>
-        <div className="space-y-5 p-5 text-sm text-sb-ink">
-          <div>
-            <p className="font-display text-xl font-semibold leading-snug">
-              Invoice export fails on invoices with no line items
+
+        <div className="space-y-4 border-b border-sb-line p-4 sm:p-5">
+          <div className="mr-8 rounded-xl rounded-bl-sm bg-sb-paper p-3.5 text-sm leading-relaxed">
+            <p className="font-mono text-[0.65rem] uppercase tracking-wider text-sb-soft">
+              Customer
             </p>
-            <p className="mt-1 font-mono text-xs text-sb-soft">
-              app.example.com/billing/invoices
+            <p className="mt-1">The invoice export button does nothing.</p>
+          </div>
+          <div className="ml-8 rounded-xl rounded-br-sm border border-sb-mark/60 bg-sb-mark/10 p-3.5 text-sm leading-relaxed">
+            <p className="font-mono text-[0.65rem] uppercase tracking-wider text-sb-soft">
+              Showbug
+            </p>
+            <p className="mt-1">
+              What did you expect to download? Does it fail for every invoice?
             </p>
           </div>
-          <dl className="space-y-4">
-            <div>
-              <dt className="font-mono text-xs uppercase tracking-wider text-sb-soft">
-                Repro steps
-              </dt>
-              <dd className="mt-1">
-                <ol className="list-decimal space-y-0.5 pl-5">
-                  <li>Open Billing → Invoices.</li>
-                  <li>Create a new invoice and leave it empty.</li>
-                  <li>
-                    Click <em className="not-italic font-medium">Export</em>.
-                    Nothing downloads.
-                  </li>
-                </ol>
-              </dd>
-            </div>
-            <div>
-              <dt className="font-mono text-xs uppercase tracking-wider text-sb-soft">
-                Console
-              </dt>
-              <dd className="mt-1 rounded-md bg-sb-paper px-3 py-2 font-mono text-xs leading-relaxed text-sb-rec">
-                TypeError: Cannot read properties of undefined (reading
-                &apos;lineItems&apos;)
-              </dd>
-            </div>
-            <div>
-              <dt className="font-mono text-xs uppercase tracking-wider text-sb-soft">
-                Said by the reporter
-              </dt>
-              <dd className="mt-1 space-y-1">
-                <p>
-                  <span className="font-medium">Agent:</span> Does it happen on
-                  every invoice?
-                </p>
-                <p>
-                  <span className="font-medium">User:</span> Only the ones I
-                  just created.
-                </p>
-              </dd>
-            </div>
-          </dl>
+          <div className="mr-8 rounded-xl rounded-bl-sm bg-sb-paper p-3.5 text-sm leading-relaxed">
+            <p className="font-mono text-[0.65rem] uppercase tracking-wider text-sb-soft">
+              Customer
+            </p>
+            <p className="mt-1">
+              A CSV. It only fails for invoices with no line items.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
+              Draft report
+            </p>
+            <span className="rounded-full border border-sb-line px-2 py-1 font-mono text-[0.62rem] text-sb-soft">
+              Needs review
+            </span>
+          </div>
+          <p className="mt-3 font-display text-xl font-semibold leading-snug">
+            Invoice export fails when line items are empty
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 font-mono text-[0.68rem] text-sb-soft sm:grid-cols-4">
+            {[
+              ["Page", "/invoices"],
+              ["Evidence", "1 error"],
+              ["Repro", "3 steps"],
+              ["Media", "1:12"],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-sb-paper px-2.5 py-2">
+                <span className="block uppercase tracking-wider">{label}</span>
+                <span className="mt-1 block font-sans text-xs font-medium text-sb-ink">
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <figcaption className="mt-4 text-xs text-sb-soft">
-        Illustrative example written by us. Not a real customer report.
+      <figcaption className="mt-4 text-xs leading-relaxed text-sb-soft">
+        Illustrative example, not a customer report. It shows the intended
+        clarification-to-draft workflow.
+      </figcaption>
+    </figure>
+  );
+}
+
+function ExampleReport() {
+  return (
+    <figure id="example-report" className="scroll-mt-28">
+      <div className="overflow-hidden rounded-2xl border border-sb-ink/20 bg-sb-surface shadow-[7px_7px_0_0_var(--sb-ink)]">
+        <div className="flex items-center justify-between border-b border-sb-line bg-sb-paper px-4 py-3 font-mono text-xs text-sb-soft">
+          <span className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-sb-rec" />
+            report draft
+          </span>
+          <span>needs review</span>
+        </div>
+        <div className="space-y-6 p-5 sm:p-7">
+          <div>
+            <p className="font-display text-2xl font-semibold leading-snug">
+              Invoice export fails when line items are empty
+            </p>
+            <p className="mt-2 font-mono text-xs text-sb-soft">
+              app.example.com/billing/invoices · Chrome 130
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-wider text-sb-soft">
+              Summary
+            </p>
+            <p className="mt-2 text-sm leading-relaxed">
+              The customer expected a CSV after selecting Export. Nothing
+              downloaded when the invoice had no line items; populated invoices
+              exported normally.
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-wider text-sb-soft">
+              Suggested steps to reproduce
+            </p>
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
+              <li>Open Billing → Invoices.</li>
+              <li>Create an invoice without adding a line item.</li>
+              <li>Select Export and observe that no CSV downloads.</li>
+            </ol>
+          </div>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-wider text-sb-soft">
+              Selected evidence
+            </p>
+            <div className="mt-2 overflow-x-auto rounded-lg bg-sb-paper p-3 font-mono text-xs leading-relaxed text-sb-rec">
+              TypeError: Cannot read properties of undefined
+              <br />
+              <span className="text-sb-soft">
+                at exportInvoice (/billing/invoices)
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full border border-sb-line px-3 py-1.5">
+              Transcript
+            </span>
+            <span className="rounded-full border border-sb-line px-3 py-1.5">
+              Screen + audio · 1:12
+            </span>
+            <span className="rounded-full border border-sb-line px-3 py-1.5">
+              DOM replay
+            </span>
+          </div>
+        </div>
+      </div>
+      <figcaption className="mt-4 text-xs leading-relaxed text-sb-soft">
+        Illustrative report written by us. Field availability depends on what
+        the customer says and what the browser captures.
       </figcaption>
     </figure>
   );
@@ -216,97 +325,242 @@ function ExampleTicket() {
 
 export default function Home() {
   return (
-    <div className="sb-page min-h-screen bg-sb-paper text-sb-ink">
+    <div className="sb-page min-h-screen overflow-x-clip bg-sb-paper text-sb-ink">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          // "<" is escaped so FAQ text can never close the script tag.
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-sb-ink focus:px-4 focus:py-2 focus:text-sb-paper"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-sb-ink focus:px-4 focus:py-2 focus:text-sb-paper"
       >
         Skip to content
       </a>
 
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-md font-display text-xl font-bold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/60"
-        >
-          <Mark className="size-7" />
-          Showbug
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Hidden on very narrow phones: the form is right below the hero. */}
-          <a
-            href="#waitlist"
-            className="hidden rounded-lg border border-sb-ink/30 px-4 py-2 text-sm font-medium outline-none hover:bg-sb-surface focus-visible:ring-3 focus-visible:ring-sb-focus/60 min-[400px]:inline-block"
+      <header className="sticky top-0 z-40 border-b border-sb-line/80 bg-sb-paper/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
+          <Link
+            href="/"
+            aria-label="Showbug home"
+            className="flex items-center gap-2 rounded-md font-display text-xl font-bold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/60"
           >
-            Join the waitlist
-          </a>
-          <ThemeToggle />
+            <Mark className="size-7" />
+            Showbug
+          </Link>
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-7 md:flex"
+          >
+            <a className="sb-nav-link" href="#how-it-works">
+              How it works
+            </a>
+            <a className="sb-nav-link" href="#report">
+              The report
+            </a>
+            <a className="sb-nav-link" href="#fit">
+              Fit
+            </a>
+            <a className="sb-nav-link" href="#questions">
+              Questions
+            </a>
+          </nav>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <a
+              href="#pilot"
+              className="hidden rounded-lg bg-sb-ink px-4 py-2.5 text-sm font-semibold text-sb-paper outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-sb-focus/60 min-[420px]:inline-flex"
+            >
+              Request a pilot
+            </a>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       <main id="main">
-        <section className="mx-auto grid max-w-6xl gap-14 px-5 pb-20 pt-10 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pb-28 lg:pt-16">
-          <div>
-            <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-sb-soft">
-              <span
-                aria-hidden="true"
-                className="sb-rec-dot size-2 rounded-full bg-sb-rec"
-              />
-              Pre-launch · waitlist open
-            </p>
-            <h1 className="mt-5 font-display text-[clamp(3rem,8vw,6rem)] font-extrabold leading-[0.95] tracking-tight [font-variation-settings:'wdth'_92]">
-              Show the <span className="sb-inspect">bug</span>.
-              <br />
-              Skip the back&#8209;and&#8209;forth.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-sb-soft">
-              Showbug is a button you embed in your app. Your user clicks it and
-              talks to a voice AI agent while their screen and mic are captured.
-              Your developers get a ticket with the recording attached.
-            </p>
-            <div id="waitlist" className="mt-9 max-w-xl scroll-mt-8">
-              <WaitlistForm />
+        <section className="relative">
+          <div className="sb-grid-bg absolute inset-0 -z-10 opacity-45" />
+          <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pt-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-16 lg:pb-28 lg:pt-20">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-sb-line bg-sb-surface px-3 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
+                <span className="size-2 rounded-full bg-sb-mark" />
+                Pre-launch · pilot requests open
+              </p>
+              <h1 className="mt-6 max-w-3xl font-display text-[clamp(2.75rem,7vw,5.75rem)] font-extrabold leading-[0.96] tracking-[-0.055em] [font-variation-settings:'wdth'_94]">
+                Get missing bug context before your team has to{" "}
+                <span className="sb-inspect">ask.</span>
+              </h1>
+              <p className="mt-7 max-w-2xl text-lg leading-relaxed text-sb-soft sm:text-xl">
+                Showbug is an embeddable bug-reporting assistant for B2B web
+                apps. It asks customers relevant questions while the problem is
+                still in front of them, then organizes the conversation, browser
+                context, and available evidence into a structured draft.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a
+                  href="#pilot"
+                  className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-sb-ink px-6 py-3 font-semibold text-sb-paper outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-sb-focus/60"
+                >
+                  Request a pilot
+                  <Arrow className="size-5 transition-transform group-hover:translate-x-0.5" />
+                </a>
+                <a
+                  href="#example-report"
+                  className="inline-flex min-h-12 items-center justify-center rounded-lg border border-sb-ink/30 bg-sb-surface px-6 py-3 font-semibold outline-none hover:bg-sb-paper focus-visible:ring-3 focus-visible:ring-sb-focus/60"
+                >
+                  See an example report
+                </a>
+              </div>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-sb-soft">
+                For founders, support leads, and engineering leads evaluating a
+                controlled desktop-Chrome pilot. No self-serve account is
+                created.
+              </p>
             </div>
-            <p className="mt-8 max-w-xl border-l-2 border-sb-mark pl-4 text-sm leading-relaxed text-sb-soft">
-              <span className="font-medium text-sb-ink">Where it stands.</span>{" "}
-              The widget, capture and a session dashboard with replay work
-              today. AI-written tickets and delivery to Linear, Jira or a
-              webhook are still being built.
-            </p>
+            <HeroEvidence />
           </div>
-          <ExampleTicket />
         </section>
 
         <section
-          aria-labelledby="how"
-          className="border-y border-sb-line bg-sb-surface"
+          aria-labelledby="prototype-status"
+          className="border-y border-sb-line bg-sb-ink text-sb-paper"
         >
-          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
-            <h2
-              id="how"
-              className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-4xl"
-            >
-              From “something is broken” to a ticket, in three steps
-            </h2>
-            <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
-              {steps.map((s, i) => (
-                <li key={s.title} className="border-t-2 border-sb-ink pt-5">
-                  <span className="font-mono text-sm text-sb-soft">
-                    Step {i + 1}
+          <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 lg:grid-cols-[0.65fr_1.35fr] lg:items-center">
+            <div>
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-sb-mark">
+                Product evidence
+              </p>
+              <h2
+                id="prototype-status"
+                className="mt-1 font-display text-xl font-semibold"
+              >
+                Working in the prototype today
+              </h2>
+            </div>
+            <ul className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm text-sb-paper/80 sm:grid-cols-4">
+              {[
+                "Embeddable widget",
+                "Live voice follow-ups",
+                "Permissioned capture",
+                "Replay + report draft",
+              ].map((item) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 shrink-0 rounded-full bg-sb-mark"
+                  />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+            <div>
+              <p className="sb-kicker">The problem</p>
+              <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+                A vague report creates work for everyone after it
+              </h2>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-sb-soft">
+                “Export is broken” may be true, but it does not tell support
+                what to ask or engineering what to inspect. By the time someone
+                follows up, the customer may have left the page or forgotten the
+                exact sequence.
+              </p>
+            </div>
+            <ol className="grid gap-4 sm:grid-cols-3">
+              {[
+                [
+                  "01",
+                  "Customer",
+                  "Reports the visible symptom, often without expected behavior or exact steps.",
+                ],
+                [
+                  "02",
+                  "Support",
+                  "Asks for the page, browser, recording, frequency, and what happened just before.",
+                ],
+                [
+                  "03",
+                  "Engineering",
+                  "Reconstructs the story across chat threads before debugging can begin.",
+                ],
+              ].map(([number, title, body]) => (
+                <li
+                  key={number}
+                  className="rounded-xl border border-sb-line bg-sb-surface p-5"
+                >
+                  <span className="font-mono text-xs text-sb-rec">
+                    {number}
                   </span>
-                  <h3 className="mt-2 font-display text-xl font-semibold">
-                    {s.title}
+                  <h3 className="mt-8 font-display text-xl font-semibold">
+                    {title}
                   </h3>
-                  <p className="mt-3 leading-relaxed text-sb-soft">{s.body}</p>
-                  <p className="mt-4 rounded-md bg-sb-paper px-3 py-2 font-mono text-xs text-sb-ink">
-                    {s.detail}
+                  <p className="mt-3 text-sm leading-relaxed text-sb-soft">
+                    {body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="mt-12 rounded-2xl border border-sb-mark/60 bg-sb-mark/10 px-6 py-6 sm:flex sm:items-center sm:justify-between sm:gap-10 lg:px-8">
+            <p className="font-display text-2xl font-semibold sm:max-w-md">
+              The best time to clarify a bug report is before the customer
+              submits it.
+            </p>
+            <p className="mt-3 max-w-xl leading-relaxed text-sb-soft sm:mt-0">
+              That is the product hypothesis we are testing: whether relevant
+              questions in the reporting moment reduce the clarification work
+              handed to support and engineering.
+            </p>
+          </div>
+        </section>
+
+        <section
+          id="how-it-works"
+          aria-labelledby="workflow-heading"
+          className="scroll-mt-24 border-y border-sb-line bg-sb-surface"
+        >
+          <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+            <div className="max-w-3xl">
+              <p className="sb-kicker">Customer → assistant → team</p>
+              <h2
+                id="workflow-heading"
+                className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl"
+              >
+                One reporting flow, with clear roles
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-sb-soft">
+                Showbug sits between the first “something broke” and the handoff
+                to your existing support or issue-tracking workflow. It is not a
+                replacement for either.
+              </p>
+            </div>
+            <ol className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-sb-line bg-sb-line md:grid-cols-2 xl:grid-cols-4">
+              {workflow.map((step, index) => (
+                <li
+                  key={step.title}
+                  className="flex min-h-80 flex-col bg-sb-paper p-6"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-sb-ink px-2.5 py-1 font-mono text-[0.65rem] uppercase tracking-wider text-sb-paper">
+                      {step.actor}
+                    </span>
+                    <span className="font-mono text-sm text-sb-soft">
+                      0{index + 1}
+                    </span>
+                  </div>
+                  <h3 className="mt-8 font-display text-2xl font-semibold leading-tight">
+                    {step.title}
+                  </h3>
+                  <p className="mt-4 leading-relaxed text-sb-soft">
+                    {step.body}
+                  </p>
+                  <p className="mt-auto border-t border-sb-line pt-5 font-mono text-xs leading-relaxed text-sb-soft">
+                    {step.detail}
                   </p>
                 </li>
               ))}
@@ -315,120 +569,325 @@ export default function Home() {
         </section>
 
         <section
-          aria-labelledby="get"
-          className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]"
+          id="report"
+          aria-labelledby="report-heading"
+          className="scroll-mt-24 mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28"
         >
-          <div>
-            <h2
-              id="get"
-              className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-            >
-              A ticket a developer can start on
-            </h2>
-            <p className="mt-4 max-w-md leading-relaxed text-sb-soft">
-              The goal: no second conversation with the reporter. This is what
-              each ticket is built to contain.
-            </p>
+          <div className="grid gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-start lg:gap-20">
+            <ExampleReport />
+            <div>
+              <p className="sb-kicker">The output</p>
+              <h2
+                id="report-heading"
+                className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl"
+              >
+                Give engineering a report, not a scavenger hunt
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-sb-soft">
+                The draft keeps the customer’s account separate from machine-
+                collected evidence. It helps a reviewer see what is known, what
+                was inferred, and what may still need verification.
+              </p>
+              <dl className="mt-10 grid gap-x-8 gap-y-7 sm:grid-cols-2">
+                {reportParts.map((part) => (
+                  <div
+                    key={part.label}
+                    className="border-t border-sb-line pt-4"
+                  >
+                    <dt className="font-display text-lg font-semibold">
+                      {part.label}
+                    </dt>
+                    <dd className="mt-2 text-sm leading-relaxed text-sb-soft">
+                      {part.body}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </div>
-          <dl className="grid gap-x-10 gap-y-7 sm:grid-cols-2">
-            {ticketParts.map((t) => (
-              <div key={t.label} className="border-t border-sb-line pt-4">
-                <dt className="font-mono text-sm font-medium">{t.label}</dt>
-                <dd className="mt-1.5 leading-relaxed text-sb-soft">
-                  {t.body}
-                </dd>
-              </div>
-            ))}
-          </dl>
         </section>
 
-        <section
-          aria-labelledby="who"
-          className="border-y border-sb-line bg-sb-surface"
-        >
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
-            <div>
-              <h2
-                id="who"
-                className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-              >
-                Who it&apos;s for
+        <section className="border-y border-sb-line bg-sb-ink text-sb-paper">
+          <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+            <div className="max-w-3xl">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-mark">
+                Capture, explained plainly
+              </p>
+              <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+                A recording and a replay are not the same thing
               </h2>
-              <p className="mt-4 max-w-md leading-relaxed text-sb-soft">
-                Not for yet: products that handle payments, health, banking or
-                credentials on screen. We would rather say so now.
+              <p className="mt-5 text-lg leading-relaxed text-sb-paper/70">
+                The distinction matters when you evaluate diagnostic value,
+                permissions, and sensitive-data risk.
               </p>
             </div>
-            <ul className="divide-y divide-sb-line border-y border-sb-line">
-              {audiences.map((a) => (
-                <li key={a.who} className="py-5">
-                  <h3 className="font-display text-lg font-semibold">
-                    {a.who}
-                  </h3>
-                  <p className="mt-1.5 leading-relaxed text-sb-soft">{a.why}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section
-          aria-labelledby="faq"
-          className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]"
-        >
-          <h2
-            id="faq"
-            className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-          >
-            Questions, answered plainly
-          </h2>
-          <div className="divide-y divide-sb-line border-y border-sb-line">
-            {faqs.map((f) => (
-              <details key={f.q} className="group py-1">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-md py-4 font-display text-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/60 [&::-webkit-details-marker]:hidden">
-                  {f.q}
-                  <span
-                    aria-hidden="true"
-                    className="font-mono text-xl text-sb-soft transition-transform group-open:rotate-45"
-                  >
-                    +
+            <div className="mt-12 grid gap-5 lg:grid-cols-2">
+              <article className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 sm:p-8">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-sb-rec font-mono text-xs text-white">
+                    REC
                   </span>
-                </summary>
-                <p className="pb-5 pr-8 leading-relaxed text-sb-soft">{f.a}</p>
-              </details>
-            ))}
+                  <h3 className="font-display text-2xl font-semibold">
+                    Screen + audio recording
+                  </h3>
+                </div>
+                <p className="mt-5 leading-relaxed text-sb-paper/70">
+                  A video of the pixels in the browser tab the customer chose,
+                  mixed with microphone and assistant audio. It helps reviewers
+                  see timing and visual state.
+                </p>
+                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-paper/80">
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    Requires the browser’s screen and mic permission prompts.
+                  </li>
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    Contains visible pixels; DOM masking does not redact the
+                    video.
+                  </li>
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    Current prototype rejects window or whole-monitor capture.
+                  </li>
+                </ul>
+              </article>
+              <article className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 sm:p-8">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-full border border-sb-mark font-mono text-xs text-sb-mark">
+                    DOM
+                  </span>
+                  <h3 className="font-display text-2xl font-semibold">
+                    DOM-based replay
+                  </h3>
+                </div>
+                <p className="mt-5 leading-relaxed text-sb-paper/70">
+                  A reconstruction from captured page events—not a second video.
+                  It can make clicks and page changes easier to inspect
+                  alongside the transcript.
+                </p>
+                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-paper/80">
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    Masks form inputs and excludes elements marked data-private.
+                  </li>
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    May not faithfully reproduce canvas, video, or cross-origin
+                    content.
+                  </li>
+                  <li className="border-l-2 border-sb-mark pl-3">
+                    Masking applies to the replay, not the raw screen recording.
+                  </li>
+                </ul>
+              </article>
+            </div>
           </div>
         </section>
 
         <section
-          aria-labelledby="join"
-          className="border-t border-sb-line bg-sb-surface"
+          id="fit"
+          aria-labelledby="fit-heading"
+          className="scroll-mt-24 mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28"
         >
-          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
-            <h2
-              id="join"
-              className="max-w-2xl font-display text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl"
-            >
-              Get early access when it opens
-            </h2>
-            <p className="mt-4 max-w-xl text-lg leading-relaxed text-sb-soft">
-              Join the waitlist and we will email you once, when Showbug is
-              ready for the first teams.
-            </p>
-            <div className="mt-8 max-w-xl">
-              <WaitlistForm />
+          <div className="grid gap-12 lg:grid-cols-[0.75fr_1.25fr] lg:gap-20">
+            <div>
+              <p className="sb-kicker">Best pilot fit</p>
+              <h2
+                id="fit-heading"
+                className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl"
+              >
+                Built for the handoff between customers and engineers
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-sb-soft">
+                The customer uses the widget. Support and engineering review the
+                result. A founder, support lead, or engineering lead typically
+                owns the decision to pilot it.
+              </p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="rounded-2xl border border-sb-ink/20 bg-sb-surface p-6">
+                <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-soft">
+                  A good fit now
+                </p>
+                <ul className="mt-6 space-y-4">
+                  {[
+                    "B2B SaaS with an authenticated browser app",
+                    "Roughly 5–50 engineers",
+                    "Support relays vague reports to engineering",
+                    "Low-sensitivity routes and pilot accounts",
+                    "A team willing to review report quality with us",
+                  ].map((item) => (
+                    <li key={item} className="flex gap-3 leading-relaxed">
+                      <span
+                        aria-hidden="true"
+                        className="mt-2 size-2 shrink-0 rounded-full bg-sb-mark"
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-sb-line bg-sb-paper p-6">
+                <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-soft">
+                  Not a fit yet
+                </p>
+                <ul className="mt-6 space-y-4">
+                  {[
+                    "Payment, health, banking, or credential screens",
+                    "Mobile-first products or non-Chrome requirements",
+                    "Silent or background recording",
+                    "Guaranteed reproduction or root-cause diagnosis",
+                    "A replacement for support or issue tracking",
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      className="flex gap-3 leading-relaxed text-sb-soft"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-2 size-2 shrink-0 rounded-full border border-sb-soft"
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-sb-line bg-sb-surface">
+          <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
+            <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
+              <div>
+                <p className="sb-kicker">Availability</p>
+                <h2 className="mt-3 font-display text-4xl font-bold tracking-tight">
+                  What works, and what still needs work
+                </h2>
+                <p className="mt-5 leading-relaxed text-sb-soft">
+                  This is a pre-launch product, not a finished self-serve SaaS.
+                  Pilot access depends on the remaining privacy, review, and
+                  production-readiness work.
+                </p>
+              </div>
+              <div className="divide-y divide-sb-line border-y border-sb-line">
+                {statusRows.map((row) => (
+                  <div
+                    key={row.status}
+                    className="grid gap-3 py-5 sm:grid-cols-[13rem_1fr] sm:gap-6"
+                  >
+                    <p className={`sb-status sb-status-${row.tone}`}>
+                      {row.status}
+                    </p>
+                    <p className="text-sm leading-relaxed text-sb-soft">
+                      {row.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="questions"
+          aria-labelledby="questions-heading"
+          className="scroll-mt-24 mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28"
+        >
+          <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
+            <div>
+              <p className="sb-kicker">Buyer questions</p>
+              <h2
+                id="questions-heading"
+                className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl"
+              >
+                Details before you request a pilot
+              </h2>
+            </div>
+            <div className="divide-y divide-sb-line border-y border-sb-line">
+              {faqs.map((faq) => (
+                <details key={faq.q} className="group py-1">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-5 rounded-md py-5 font-display text-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/60 [&::-webkit-details-marker]:hidden">
+                    {faq.q}
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-2xl font-normal text-sb-soft transition-transform group-open:rotate-45"
+                    >
+                      +
+                    </span>
+                  </summary>
+                  <p className="max-w-3xl pb-6 pr-10 leading-relaxed text-sb-soft">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="pilot"
+          aria-labelledby="pilot-heading"
+          className="scroll-mt-24 border-t border-sb-line bg-sb-ink text-sb-paper"
+        >
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20 lg:py-24">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-mark">
+                Early design partners
+              </p>
+              <h2
+                id="pilot-heading"
+                className="mt-3 max-w-xl font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl"
+              >
+                Help us test whether better questions create better reports
+              </h2>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-sb-paper/70">
+                We are looking for a small number of B2B SaaS teams willing to
+                run a controlled pilot and review report quality with the
+                founders.
+              </p>
+              <ul className="mt-8 space-y-3 text-sm text-sb-paper/80">
+                <li className="flex gap-3">
+                  <span className="text-sb-mark">01</span> We review your
+                  current reporting workflow.
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-sb-mark">02</span> We confirm that the
+                  product area fits the safety boundary.
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-sb-mark">03</span> If it fits, we scope
+                  installation and evaluation together.
+                </li>
+              </ul>
+            </div>
+            <div className="rounded-2xl bg-sb-paper p-5 text-sb-ink sm:p-7">
+              <WaitlistForm buttonLabel="Request a pilot" />
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-sb-line">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-8 text-sm text-sb-soft sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p className="flex items-center gap-2">
+      <footer className="border-t border-white/10 bg-sb-ink text-sb-paper/60">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <p className="flex items-center gap-2 text-sb-paper">
             <Mark className="size-5" />
             Showbug · showbugai.com
           </p>
-          <p>Pre-launch. Details may change.</p>
+          <nav
+            aria-label="Footer navigation"
+            className="flex flex-wrap gap-x-5 gap-y-2"
+          >
+            <a className="hover:text-sb-paper" href="#how-it-works">
+              How it works
+            </a>
+            <a className="hover:text-sb-paper" href="#fit">
+              Pilot fit
+            </a>
+            <a className="hover:text-sb-paper" href="#questions">
+              Questions
+            </a>
+            <a className="hover:text-sb-paper" href="#pilot">
+              Request a pilot
+            </a>
+          </nav>
+          <p>Pre-launch · details may change</p>
         </div>
       </footer>
     </div>
