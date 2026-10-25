@@ -18,7 +18,7 @@ The repository already contains a real plumbing prototype:
 - Lazy-loading embedded widget.
 - Screen and microphone capture.
 - Realtime voice conversation over WebRTC.
-- Periodic screen frames, transcripts, rrweb, console errors, failed requests, and clicks.
+- Periodic screen frames, transcripts, rrweb, bounded/redacted console output, sanitized fetch/XHR metadata, and clicks.
 - Chunked local media storage.
 - A basic session list and detail dashboard.
 
@@ -187,7 +187,7 @@ Use an allow-list collection model. Capture only fields required to produce the 
 | Input values | Mask | May contain PII or secrets |
 | Visible page text | Do not collect globally | Broad, unpredictable data surface |
 | Console messages | Redact and length-limit | Applications frequently log tokens and user objects |
-| Failed request method/status/path | Capture sanitized | High diagnostic value with limited content |
+| Request method/status/path/timing | Capture sanitized and bounded | High diagnostic value without headers or bodies |
 | User/account ID | Pseudonymous, signed claim | Useful for support; must not be client-authoritative |
 | Email/name | Off by default | Usually unnecessary for debugging |
 | Voice transcript | Explicit consent, short retention | Personal data and potentially sensitive content |

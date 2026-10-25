@@ -21,6 +21,9 @@ export type Session = {
   prefix: string;
   transcript: TranscriptSegment[];
   context: {
+    /** Added by full diagnostic capture; older sessions don't have these. */
+    consoleLogs?: unknown[];
+    networkRequests?: unknown[];
     consoleErrors: unknown[];
     failedRequests: unknown[];
     clicks: unknown[];

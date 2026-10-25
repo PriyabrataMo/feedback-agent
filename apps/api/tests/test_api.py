@@ -269,6 +269,43 @@ def test_end_keeps_navigations(client, session_id):
     )
 
 
+def test_end_keeps_bounded_diagnostic_metadata(client, session_id):
+    logs = [
+        {"level": "info", "message": f"message {i}", "at": i, "ignored": "x"} for i in range(105)
+    ]
+    requests = [
+        {
+            "type": "xhr" if i % 2 else "fetch",
+            "method": "GET",
+            "url": f"https://example.test/items/{i}?token=must-not-be-stored#fragment",
+            "status": 500 if i == 104 else 200,
+            "durationMs": i,
+            "at": i,
+            "headers": {"Authorization": "must not be stored"},
+        }
+        for i in range(105)
+    ]
+    r = client.post(
+        f"/api/v1/sessions/{session_id}/end",
+        headers=H,
+        json={"context": {"consoleLogs": logs, "networkRequests": requests}},
+    )
+    assert r.status_code == 200
+    context = client.get(f"/api/v1/admin/sessions/{session_id}").json()["context"]
+    assert len(context["consoleLogs"]) == 100
+    assert context["consoleLogs"][0] == {"level": "info", "message": "message 5", "at": 5}
+    assert len(context["networkRequests"]) == 100
+    assert context["networkRequests"][-1] == {
+        "type": "fetch",
+        "method": "GET",
+        "url": "https://example.test/items/104",
+        "status": 500,
+        "durationMs": 104,
+        "at": 104,
+    }
+    assert context["failedRequests"] == [context["networkRequests"][-1]]
+
+
 @pytest.mark.parametrize("env", ["production", "Production", "prod", "staging", "PRODUCTION "])
 def test_dev_routes_fail_closed_outside_development(tmp_path, env):
     with TestClient(create_app(Settings(data_dir=tmp_path, environment=env))) as c:

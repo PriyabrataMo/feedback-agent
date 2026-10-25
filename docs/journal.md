@@ -2,6 +2,10 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-24 — Full console and fetch/XHR diagnostic metadata
+- Expanded the passive SDK collector from warnings/errors and failed fetches to all console levels and every completed `fetch`/XHR request. Each network entry contains only type, method, origin + path, status, duration, and timestamp; the SDK's own requests, headers, cookies, query/hash values, and request/response bodies are excluded. *Why:* successful requests and informational logs often explain the lead-up to a bug, while raw traffic would create a disproportionate credential/PII risk.
+- Both streams use 100-entry rolling buffers and the old error-only lists remain available for ticket generation and the replay timeline. During an active recording, every new diagnostic is additionally written as an rrweb custom event and uploaded in the existing five-second batches; the API re-shapes and caps the rolling entries before storing session context. *Why:* preserve the complete recorded-session trail plus recent pre-session context, while retaining compatibility and keeping the end-session request bounded.
+
 ## 2026-10-24 — Unified Python and Next.js quality gates
 - Added Ruff formatting/linting, mypy, Prettier, stricter ESLint scripts, EditorConfig, VS Code recommendations, staged-file linting, and Conventional Commit validation, based on the `ncert-helper-agent` setup.
 - A root Husky hook coordinates Python `pre-commit` and frontend `lint-staged` checks. *Why:* this repository is one monorepo, unlike the reference project's separate backend/frontend Git repositories, so two independent hook managers would overwrite each other's Git hooks.

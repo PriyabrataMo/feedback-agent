@@ -60,10 +60,20 @@ const KIND_META: Record<
     icon: Globe,
     tone: "text-sky-700 dark:text-sky-400",
   },
+  "console-log": {
+    label: "Console",
+    icon: TerminalSquare,
+    tone: "text-muted-foreground",
+  },
   "console-error": {
     label: "Console error",
     icon: TerminalSquare,
     tone: "text-destructive",
+  },
+  "network-request": {
+    label: "Network",
+    icon: Globe,
+    tone: "text-blue-700 dark:text-blue-400",
   },
   "failed-request": {
     label: "Failed request",
@@ -559,7 +569,7 @@ export function SessionPlayback({
           <CardHeader>
             <CardTitle>Timeline</CardTitle>
             <CardDescription>
-              Navigations, console errors and failed requests.
+              Navigations, console output and fetch/XHR requests.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -567,7 +577,7 @@ export function SessionPlayback({
               <p className="text-sm text-muted-foreground">
                 {load.state === "loading"
                   ? "Loading…"
-                  : "No navigations, console errors or failed requests were captured."}
+                  : "No navigations, console output or network requests were captured."}
               </p>
             ) : (
               <ol
