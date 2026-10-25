@@ -144,7 +144,9 @@ async def upload_url(session_id: str, request: Request):
     key = f"{session.prefix}/media/{seq:06d}.{ext}"
     storage = storage_for(request.app.state.local_storage, project.id)
     url = await storage.presign_put(key, content_type=content_type, expires_in_sec=300)
-    return jsend({"url": url, "key": key}, 200, origin)
+    # Content-Type is a signed header on S3: the browser must send exactly this value (not the
+    # recorder's "video/webm;codecs=..."), or S3 answers SignatureDoesNotMatch.
+    return jsend({"url": url, "key": key, "headers": {"Content-Type": content_type}}, 200, origin)
 
 
 @router.post("/{session_id}/events")

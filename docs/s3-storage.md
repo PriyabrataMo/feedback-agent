@@ -81,7 +81,9 @@ Apply: `aws s3api put-bucket-cors --bucket BUCKET --cors-configuration file://co
 
 ## Content-Type on presigned PUTs
 
-The presign signs `Content-Type`. The browser PUT must send exactly the same `Content-Type` header the API was given for that chunk (the SDK passes the MediaRecorder type, for example `video/webm;codecs=vp9`), otherwise S3 returns `SignatureDoesNotMatch`. If the SDK ever changes the header it sends, the `contentType` it posts to `upload-url` must change with it. No other headers are signed, so no `x-amz-*` headers are needed from the browser.
+The presign signs `Content-Type`, and the value is chosen by the API, not the browser: it is `video/webm` or `video/mp4`, never the recorder's own type (which carries codecs, for example `video/webm;codecs=vp9`). `upload-url` returns the exact headers to send as `headers` (`{"Content-Type": "video/webm"}`), and the SDK sends those, otherwise S3 returns `SignatureDoesNotMatch`. The `contentType` the SDK posts only decides webm versus mp4. No other headers are signed, so no `x-amz-*` headers are needed from the browser.
+
+Until 2026-10-25 the SDK sent the recorder's type instead, which could never match; moto and the local backend do not check signatures, so nothing caught it. `tests/test_s3.py` now recomputes the SigV4 signature from the `upload-url` response to guard against it. That check is offline: no upload to real S3 has been made yet.
 
 URL lifetime: `upload-url` uses 300 s. In BYOB mode a presigned URL also dies when the assumed-role session expires; credentials are refreshed when fewer than 15 minutes remain, so any URL we hand out is valid for at least its requested lifetime (up to 15 minutes).
 

@@ -1,13 +1,18 @@
 import asyncio
+import hashlib
+import hmac
+import os
 from datetime import UTC, datetime, timedelta
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, parse_qsl, quote, urlparse
 
 import boto3
 import pytest
 from botocore.exceptions import ClientError
+from fastapi.testclient import TestClient
 from moto import mock_aws
 
 from app.config import S3Config, Settings
+from app.main import create_app
 from app.storage import (
     ByobConfig,
     LocalStorage,
@@ -131,6 +136,91 @@ def test_presigned_put_and_get_work_end_to_end(s3):
     assert r.status_code == 200
     get = run(s3.presign_get("p/s/media/000001.webm", expires_in_sec=300))
     assert requests.get(get).content == b"chunk"
+
+
+def _sigv4_query_signature(url: str, headers: dict[str, str], secret: str) -> tuple[str, str]:
+    """
+    (signature in the URL, signature S3 would compute for a PUT sent with `headers`).
+
+    moto does not verify signatures, so a header mismatch passes every moto test and fails only on
+    real S3. This redoes the check S3 does: rebuild the canonical request from what the browser
+    sends, and re-derive the signature with the secret key. moto replaces the credentials inside
+    `mock_aws()`, so read the secret from the environment there, not from `aws_env`.
+    """
+    u = urlparse(url)
+    query = dict(parse_qsl(u.query, keep_blank_values=True))
+    in_url = query.pop("X-Amz-Signature")
+    signed = query["X-Amz-SignedHeaders"].split(";")
+    sent = {k.lower(): " ".join(v.split()) for k, v in headers.items()} | {"host": u.netloc}
+    unreserved = "-_.~"
+    canonical = "\n".join(
+        [
+            "PUT",
+            quote(u.path, safe="/" + unreserved),
+            "&".join(
+                f"{quote(k, safe=unreserved)}={quote(v, safe=unreserved)}"
+                for k, v in sorted(query.items())
+            ),
+            "".join(f"{h}:{sent.get(h, '')}\n" for h in signed),
+            ";".join(signed),
+            "UNSIGNED-PAYLOAD",
+        ]
+    )
+    scope = "/".join(query["X-Amz-Credential"].split("/")[1:])  # date/region/s3/aws4_request
+    to_sign = "\n".join(
+        [
+            "AWS4-HMAC-SHA256",
+            query["X-Amz-Date"],
+            scope,
+            hashlib.sha256(canonical.encode()).hexdigest(),
+        ]
+    )
+    key = f"AWS4{secret}".encode()
+    for part in scope.split("/"):
+        key = hmac.new(key, part.encode(), hashlib.sha256).digest()
+    return in_url, hmac.new(key, to_sign.encode(), hashlib.sha256).hexdigest()
+
+
+# What Chrome's MediaRecorder reports, and what the SDK used to send as Content-Type.
+RECORDER_TYPE = "video/webm;codecs=vp8,opus"
+
+
+def test_signature_binds_content_type_exactly(s3):
+    secret = os.environ["AWS_SECRET_ACCESS_KEY"]
+    url = run(
+        s3.presign_put("p/s/media/000001.webm", content_type="video/webm", expires_in_sec=300)
+    )
+    in_url, recomputed = _sigv4_query_signature(url, {"Content-Type": "video/webm"}, secret)
+    assert in_url == recomputed  # the verifier agrees with botocore
+    in_url, recomputed = _sigv4_query_signature(url, {"Content-Type": RECORDER_TYPE}, secret)
+    assert in_url != recomputed  # a codecs suffix is a different signed value: S3 would refuse it
+
+
+def test_upload_url_headers_satisfy_the_signature(tmp_path, monkeypatch):
+    """Regression: the SDK must send the headers the API signed, not the recorder's own type."""
+    monkeypatch.setenv("STORAGE_BACKEND", "s3")
+    monkeypatch.setenv("S3_BUCKET", BUCKET)
+    monkeypatch.setenv("S3_REGION", REGION)
+    h = {"X-Public-Key": "pk_dev_demo", "Origin": "http://localhost:3000"}
+    with mock_aws():
+        secret = os.environ["AWS_SECRET_ACCESS_KEY"]
+        boto3.client("s3", region_name=REGION).create_bucket(Bucket=BUCKET)
+        with TestClient(create_app(Settings(data_dir=tmp_path))) as c:
+            created = c.post("/api/v1/sessions", headers=h, json={"url": "http://localhost:3000/"})
+            r = c.post(
+                f"/api/v1/sessions/{created.json()['sessionId']}/upload-url",
+                headers=h,
+                json={"seq": 0, "contentType": RECORDER_TYPE},
+            )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["headers"] == {"Content-Type": "video/webm"}
+    in_url, recomputed = _sigv4_query_signature(body["url"], body["headers"], secret)
+    assert in_url == recomputed
+    in_url, recomputed = _sigv4_query_signature(
+        body["url"], {"Content-Type": RECORDER_TYPE}, secret
+    )
+    assert in_url != recomputed
 
 
 def test_presign_get_shape(s3):

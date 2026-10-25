@@ -323,6 +323,24 @@ def test_upload_url_ignores_client_content_type(client, session_id):
     assert "text%2Fhtml" not in r.json()["url"] and "text/html" not in r.json()["url"]
 
 
+@pytest.mark.parametrize(
+    ("requested", "signed"),
+    [
+        ("video/webm;codecs=vp8,opus", "video/webm"),
+        ("video/webm", "video/webm"),
+        ("video/mp4;codecs=avc1", "video/mp4"),
+    ],
+)
+def test_upload_url_returns_the_headers_it_signed(client, session_id, requested, signed):
+    r = client.post(
+        f"/api/v1/sessions/{session_id}/upload-url",
+        headers=H,
+        json={"seq": 0, "contentType": requested},
+    )
+    assert r.status_code == 200
+    assert r.json()["headers"] == {"Content-Type": signed}
+
+
 def test_oversized_and_malformed_bodies(client, session_id):
     url = f"/api/v1/sessions/{session_id}/events"
     assert client.post(url, headers=H, content=b"x" * 1_000_001).status_code == 413
