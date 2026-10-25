@@ -2,6 +2,14 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Decision: Auth0 for dashboard identity, M2M only where a machine must call Auth0
+- Decision (user): use Auth0 instead of the custom password/login design in `docs/tenancy.md`. Plan: `docs/auth0-plan.md` (plan only, nothing built; `tenancy.md` not yet updated).
+- Split: Auth0 owns login, passwords, reset, verification, MFA and later SSO. Our MongoDB keeps `memberships` and roles. *Why:* Auth0 Free allows 5 Organizations and has no Role Management, and a membership row revokes access on the next request while a token claim lives until expiry. The tenancy kernel (scopes, guarded views, storage prefixes, quotas, purge) is unchanged. Auth0 Organizations is deferred until a customer needs enterprise SSO.
+- M2M is used for our API calling the Auth0 Management API (create invited users, block, erase) with one app per environment, a cached token and least-privilege scopes. *Why not for customers' machines:* Free allows about 1,000 M2M tokens a month (community answer, unverified) and each client is not org-bound, so customer API access stays on our own hashed keys. SDK, worker and sweeper use no Auth0 tokens.
+- One Auth0 tenant per environment (dev, pre-prod, prod). Local development and CI use a local issuer and JWKS; real Auth0 is exercised in pre-prod.
+- Consequence: the custom password work (`passwords.py`, `test_tenancy_passwords.py`, lockout, `/auth/login`, `dbt_` tokens, `auth_tokens`) becomes dead code once the Auth0 plan lands. The `docs/tenancy.md` sections to revise are listed in the plan. Not deleted yet, because another session is editing that area.
+- Open: whether Auth0 can do invite-only onboarding (spike first), free-tenant count, MFA on Free, region (permanent), email provider.
+
 ## 2026-10-25 — Waitlist friction, telemetry compatibility, and landing-page legibility
 - Email is now the only required waitlist field. Company, role, and workflow are optional design-partner qualification behind a collapsed disclosure. *Why:* visitors who only want launch updates should not have to apply for a pilot.
 - Restored the MongoDB `client` and `request` objects, including referral/UTM, locale, display dimensions, time-to-submit, parsed browser/OS/device, coarse Vercel location, and a salted IP hash. Raw IP addresses are not stored, and the form now discloses the passive telemetry. An email-only resubmission does not erase qualification saved previously.
