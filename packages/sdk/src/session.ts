@@ -89,18 +89,21 @@ export async function runSession(opts: SessionOptions): Promise<SessionHandle> {
   const uploadChunk = async (seq: number, blob: Blob) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const { url } = await api<{ url: string }>(
-          `/sessions/${sessionId}/upload-url`,
-          {
-            seq,
-            contentType: recorder.mimeType,
-          },
-        );
+        const { url, headers } = await api<{
+          url: string;
+          headers?: Record<string, string>;
+        }>(`/sessions/${sessionId}/upload-url`, {
+          seq,
+          contentType: recorder.mimeType,
+        });
         const target = url.startsWith("/") ? apiBase + url : url;
+        // The server signs the Content-Type, so send exactly the headers it returns. The recorder's
+        // own type carries codecs (video/webm;codecs=vp8,opus) and would fail the signature on S3;
+        // the fallback is only for an API that predates the returned headers.
         const res = await fetch(target, {
           method: "PUT",
           body: blob,
-          headers: { "Content-Type": recorder.mimeType },
+          headers: headers ?? { "Content-Type": recorder.mimeType },
         });
         if (res.ok) return;
       } catch {

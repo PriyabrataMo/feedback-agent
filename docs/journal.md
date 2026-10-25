@@ -2,6 +2,11 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Fixed: chunk uploads would have failed on real S3 (signed Content-Type)
+- Cause: `upload-url` signs `Content-Type: video/webm` (or `video/mp4`), but the SDK sent `recorder.mimeType`, usually `video/webm;codecs=vp8,opus`. `Content-Type` is a signed header, so S3 would answer `SignatureDoesNotMatch` for every chunk, and the SDK would retry three times and then drop it. Nothing caught it because moto and the local backend do not check signatures, and the existing end-to-end test sent the header it already knew was signed. `docs/s3-storage.md` described the SDK as sending the signed value, which is why it looked fine.
+- Fix: `upload-url` now returns the exact headers it signed (`headers`), and the SDK sends those. The old header is only a fallback for an API that predates this. Regression tests recompute the SigV4 signature the way S3 does, from the API's response, and assert the returned headers match it and the recorder's type does not.
+- Still unverified: no upload to real S3 has been made, so this is checked offline only. First real-bucket upload is phase 0's exit criterion in `docs/storage-plan.md`. Also found: the existing `"testing" not in url` assertion in `test_s3.py` is vacuous, because moto swaps the credentials inside `mock_aws()`; left alone.
+
 ## 2026-10-25 — Plan: production storage (S3 layout, signed URLs, deletion, DB references, scale)
 - Plan only, nothing built or deployed: `docs/storage-plan.md`. It sits on the earlier AWS decision (new personal account, never the company profiles; pre-prod and prod buckets, dev on local storage).
 - Finding (code reading plus an offline botocore check, **not run against real S3**): the API presigns `Content-Type: video/webm` while the SDK sends `recorder.mimeType`, usually `video/webm;codecs=...`. `content-type` is a signed header, so real S3 would answer `SignatureDoesNotMatch` and every chunk upload would fail. Local backend and moto do not check signatures, so tests pass. Fix: switch to a presigned POST policy where the API dictates the exact fields.
