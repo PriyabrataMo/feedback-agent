@@ -7,6 +7,7 @@ Newest entry first. Append after every meaningful discussion. Record decisions w
 - Restored the MongoDB `client` and `request` objects, including referral/UTM, locale, display dimensions, time-to-submit, parsed browser/OS/device, coarse Vercel location, and a salted IP hash. Raw IP addresses are not stored, and the form now discloses the passive telemetry. An email-only resubmission does not erase qualification saved previously.
 - Simplified the page surfaces, opened the hero's line height/width/tracking, removed the decorative grid, and replaced fixed inverted sections with semantic theme colors. *Why:* improve hierarchy and preserve readable contrast in both light and dark themes, following Marker.io's useful principles of concise hierarchy, whitespace, and clear product evidence without copying its branding or claims.
 - Removed the “Product evidence / Working in the prototype today” strip. *Why:* it described feature claims as evidence, repeated information shown elsewhere, and interrupted the transition from the hero to the customer problem.
+- Replaced the native design-partner `<details>` disclosure with an accessible, smoothly expanding control and disabled focus inside the collapsed panel. *Why:* native disclosure changed the form height abruptly and caused a visible page jump.
 - Bricolage Grotesque and Geist are both distributed under the SIL Open Font License 1.1 and are permitted for commercial web use.
 
 ## 2026-10-25 — Landing page repositioned around interactive clarification

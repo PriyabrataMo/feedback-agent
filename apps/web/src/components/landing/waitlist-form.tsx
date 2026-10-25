@@ -68,11 +68,13 @@ export function WaitlistForm({
   const companyId = `${uid}-company`;
   const roleId = `${uid}-role`;
   const workflowId = `${uid}-workflow`;
+  const pilotDetailsId = `${uid}-pilot-details`;
   const noteId = `${uid}-note`;
   const messageId = `${uid}-message`;
   const shownAt = useRef<number | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [showPilotDetails, setShowPilotDetails] = useState(false);
   const [submittedForPilot, setSubmittedForPilot] = useState(false);
 
   useEffect(() => {
@@ -176,79 +178,100 @@ export function WaitlistForm({
         </div>
       </div>
 
-      <details className="group rounded-lg border border-sb-line bg-sb-surface">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-4 py-3 text-sm font-semibold text-sb-ink outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/40 [&::-webkit-details-marker]:hidden">
+      <div className="rounded-lg border border-sb-line bg-sb-surface [overflow-anchor:none]">
+        <button
+          type="button"
+          aria-expanded={showPilotDetails}
+          aria-controls={pilotDetailsId}
+          onClick={() => setShowPilotDetails((shown) => !shown)}
+          className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-lg px-4 py-3 text-left text-sm font-semibold text-sb-ink outline-none focus-visible:ring-3 focus-visible:ring-sb-focus/40"
+        >
           Interested in a design-partner pilot? Add details
           <span
             aria-hidden="true"
-            className="text-lg font-normal text-sb-soft transition-transform group-open:rotate-45"
+            className={cn(
+              "text-lg font-normal text-sb-soft transition-transform duration-300 motion-reduce:transition-none",
+              showPilotDetails && "rotate-45",
+            )}
           >
             +
           </span>
-        </summary>
-        <div className="grid gap-4 border-t border-sb-line p-4 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor={companyId}
-              className="block text-sm font-medium text-sb-ink"
-            >
-              Company{" "}
-              <span className="font-normal text-sb-soft">(optional)</span>
-            </label>
-            <input
-              id={companyId}
-              name="company"
-              type="text"
-              maxLength={120}
-              autoComplete="organization"
-              placeholder="Acme"
-              disabled={busy}
-              className={cn(fieldClass, "mt-2")}
-            />
-          </div>
-          <div>
-            <label
-              htmlFor={roleId}
-              className="block text-sm font-medium text-sb-ink"
-            >
-              Your role{" "}
-              <span className="font-normal text-sb-soft">(optional)</span>
-            </label>
-            <select
-              id={roleId}
-              name="role"
-              defaultValue=""
-              disabled={busy}
-              className={cn(fieldClass, "mt-2 appearance-none")}
-            >
-              <option value="">Select a role</option>
-              <option value="founder">Founder or executive</option>
-              <option value="support">Support or success</option>
-              <option value="engineering">Engineering or QA</option>
-              <option value="product">Product</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label
-              htmlFor={workflowId}
-              className="block text-sm font-medium text-sb-ink"
-            >
-              How do bug reports reach engineering?{" "}
-              <span className="font-normal text-sb-soft">(optional)</span>
-            </label>
-            <textarea
-              id={workflowId}
-              name="workflow"
-              rows={3}
-              maxLength={600}
-              disabled={busy}
-              placeholder="For example: support rewrites Intercom messages in Linear."
-              className={cn(fieldClass, "mt-2 resize-y py-3")}
-            />
+        </button>
+        <div
+          id={pilotDetailsId}
+          aria-hidden={!showPilotDetails}
+          inert={!showPilotDetails}
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+            showPilotDetails ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className="grid gap-4 border-t border-sb-line p-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor={companyId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  Company{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <input
+                  id={companyId}
+                  name="company"
+                  type="text"
+                  maxLength={120}
+                  autoComplete="organization"
+                  placeholder="Acme"
+                  disabled={busy}
+                  className={cn(fieldClass, "mt-2")}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor={roleId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  Your role{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <select
+                  id={roleId}
+                  name="role"
+                  defaultValue=""
+                  disabled={busy}
+                  className={cn(fieldClass, "mt-2 appearance-none")}
+                >
+                  <option value="">Select a role</option>
+                  <option value="founder">Founder or executive</option>
+                  <option value="support">Support or success</option>
+                  <option value="engineering">Engineering or QA</option>
+                  <option value="product">Product</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor={workflowId}
+                  className="block text-sm font-medium text-sb-ink"
+                >
+                  How do bug reports reach engineering?{" "}
+                  <span className="font-normal text-sb-soft">(optional)</span>
+                </label>
+                <textarea
+                  id={workflowId}
+                  name="workflow"
+                  rows={3}
+                  maxLength={600}
+                  disabled={busy}
+                  placeholder="For example: support rewrites Intercom messages in Linear."
+                  className={cn(fieldClass, "mt-2 resize-y py-3")}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </details>
+      </div>
 
       <div
         aria-hidden="true"
