@@ -1,10 +1,14 @@
-/** Public pilot-request endpoint: validate, rate-limit, and store in MongoDB. */
-import { pilotRequestInputSchema } from "@/lib/waitlist-schema";
+/** Public waitlist endpoint: validate, enrich, rate-limit, and store in MongoDB. */
+import {
+  requestInfoSchema,
+  waitlistInputSchema,
+  type RequestInfo,
+} from "@/lib/waitlist-schema";
 import {
   clientIp,
   hashIp,
   isRateLimited,
-  savePilotRequest,
+  saveWaitlistEntry,
 } from "@/lib/waitlist";
 
 const MAX_BODY_BYTES = 4096;
@@ -13,6 +17,77 @@ function reply(status: number, error?: string) {
   return Response.json(error ? { ok: false, error } : { ok: true }, {
     status,
     headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function text(value: string | null, max: number): string | null {
+  if (!value) return null;
+  const clean = value
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .slice(0, max);
+  return clean || null;
+}
+
+function parseUserAgent(
+  userAgent: string,
+): Pick<RequestInfo, "browser" | "os" | "device"> {
+  const browser = /Edg\//.test(userAgent)
+    ? "Edge"
+    : /OPR\/|Opera/.test(userAgent)
+      ? "Opera"
+      : /Firefox\//.test(userAgent)
+        ? "Firefox"
+        : /Chrome\/|CriOS\//.test(userAgent)
+          ? "Chrome"
+          : /Safari\//.test(userAgent)
+            ? "Safari"
+            : "Other";
+  const os = /iPhone|iPad|iPod/.test(userAgent)
+    ? "iOS"
+    : /Android/.test(userAgent)
+      ? "Android"
+      : /Windows/.test(userAgent)
+        ? "Windows"
+        : /Mac OS X|Macintosh/.test(userAgent)
+          ? "macOS"
+          : /Linux|X11/.test(userAgent)
+            ? "Linux"
+            : "Other";
+  const device = /bot|crawler|spider|headless/i.test(userAgent)
+    ? "bot"
+    : /iPad|Tablet/.test(userAgent)
+      ? "tablet"
+      : /Mobi|iPhone|Android/.test(userAgent)
+        ? "mobile"
+        : userAgent
+          ? "desktop"
+          : "unknown";
+  return { browser, os, device };
+}
+
+function decodeLocation(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    return text(decodeURIComponent(value), 100);
+  } catch {
+    return text(value, 100);
+  }
+}
+
+function buildRequestInfo(
+  headers: Headers,
+  ipHash: string | null,
+): RequestInfo {
+  const userAgent = text(headers.get("user-agent"), 400) ?? "";
+  return requestInfoSchema.parse({
+    userAgent,
+    ...parseUserAgent(userAgent),
+    acceptLanguage: text(headers.get("accept-language"), 100),
+    country: decodeLocation(headers.get("x-vercel-ip-country")),
+    region: decodeLocation(headers.get("x-vercel-ip-country-region")),
+    city: decodeLocation(headers.get("x-vercel-ip-city")),
+    ipHash,
   });
 }
 
@@ -41,7 +116,7 @@ export async function POST(request: Request) {
   } catch {
     return reply(422, "invalid_request");
   }
-  const parsed = pilotRequestInputSchema.safeParse(json);
+  const parsed = waitlistInputSchema.safeParse(json);
   if (!parsed.success) return reply(422, "invalid_request");
 
   // Honeypot: look successful and store nothing.
@@ -55,11 +130,13 @@ export async function POST(request: Request) {
       response.headers.set("Retry-After", "60");
       return response;
     }
-    await savePilotRequest({
+    await saveWaitlistEntry({
       email: parsed.data.email,
-      company: parsed.data.company,
-      role: parsed.data.role,
+      company: parsed.data.company || null,
+      role: parsed.data.role || null,
       workflow: parsed.data.workflow || null,
+      client: parsed.data.client,
+      request: buildRequestInfo(request.headers, ipHash),
       source: parsed.data.source,
       ipHash,
     });
@@ -67,7 +144,7 @@ export async function POST(request: Request) {
   } catch (error) {
     // Never log the submitted email or company name.
     console.error(
-      "pilot request: storage unavailable",
+      "waitlist: storage unavailable",
       error instanceof Error ? error.name : "unknown error",
     );
     return reply(502, "unavailable");

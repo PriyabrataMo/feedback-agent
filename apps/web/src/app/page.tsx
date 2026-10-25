@@ -106,8 +106,8 @@ const faqs = [
     a: "No. Form inputs are masked in the DOM replay, and elements marked data-private are excluded from replay and click capture. The screen recording contains the visible pixels in the tab the customer selected. Pixel-level redaction is not built, so payment, health, banking, credential, and secret-management screens are not appropriate for the current product.",
   },
   {
-    q: "What happens after I request a pilot?",
-    a: "A founder reviews the request. If your product and workflow fit the current desktop-Chrome, low-sensitivity pilot scope, we will email you to learn how reports move from customers to support and engineering. Submitting the form does not create an account or guarantee access.",
+    q: "What happens when I join the waitlist?",
+    a: "We store your email and use it to tell you when early access opens. If you also add the optional design-partner details, a founder may contact you to learn how reports move from customers to support and engineering. Joining does not create an account or guarantee pilot access.",
   },
   {
     q: "How much will it cost?",
@@ -179,7 +179,7 @@ function HeroEvidence() {
   return (
     <figure className="relative mx-auto w-full max-w-[34rem] lg:ml-auto">
       <div className="absolute -inset-3 -z-10 translate-x-2 translate-y-2 rounded-[1.75rem] bg-sb-mark/20" />
-      <div className="overflow-hidden rounded-2xl border border-sb-ink/20 bg-sb-surface shadow-[8px_8px_0_0_var(--sb-ink)]">
+      <div className="overflow-hidden rounded-2xl border border-sb-line bg-sb-surface shadow-[0_30px_80px_-45px_rgba(17,22,43,0.55)]">
         <div className="flex items-center justify-between border-b border-sb-line bg-sb-paper px-4 py-3 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
           <span className="flex items-center gap-2">
             <span className="sb-rec-dot size-2 rounded-full bg-sb-rec" />
@@ -253,7 +253,7 @@ function HeroEvidence() {
 function ExampleReport() {
   return (
     <figure id="example-report" className="scroll-mt-28">
-      <div className="overflow-hidden rounded-2xl border border-sb-ink/20 bg-sb-surface shadow-[7px_7px_0_0_var(--sb-ink)]">
+      <div className="overflow-hidden rounded-2xl border border-sb-line bg-sb-surface shadow-[0_30px_80px_-45px_rgba(17,22,43,0.55)]">
         <div className="flex items-center justify-between border-b border-sb-line bg-sb-paper px-4 py-3 font-mono text-xs text-sb-soft">
           <span className="flex items-center gap-2">
             <span className="size-2 rounded-full bg-sb-rec" />
@@ -368,10 +368,10 @@ export default function Home() {
           </nav>
           <div className="flex items-center gap-2 sm:gap-3">
             <a
-              href="#pilot"
+              href="#waitlist"
               className="hidden rounded-lg bg-sb-ink px-4 py-2.5 text-sm font-semibold text-sb-paper outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-sb-focus/60 min-[420px]:inline-flex"
             >
-              Request a pilot
+              Join the waitlist
             </a>
             <ThemeToggle />
           </div>
@@ -380,14 +380,13 @@ export default function Home() {
 
       <main id="main">
         <section className="relative">
-          <div className="sb-grid-bg absolute inset-0 -z-10 opacity-45" />
-          <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-12 sm:px-8 sm:pt-16 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-16 lg:pb-28 lg:pt-20">
+          <div className="mx-auto grid max-w-7xl gap-16 px-5 pb-24 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:gap-20 lg:pb-32 lg:pt-24">
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-sb-line bg-sb-surface px-3 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-sb-soft">
                 <span className="size-2 rounded-full bg-sb-mark" />
-                Pre-launch · pilot requests open
+                Pre-launch · waitlist open
               </p>
-              <h1 className="mt-6 max-w-3xl font-display text-[clamp(2.75rem,7vw,5.75rem)] font-extrabold leading-[0.96] tracking-[-0.055em] [font-variation-settings:'wdth'_94]">
+              <h1 className="mt-7 max-w-3xl font-display text-[clamp(2.75rem,5.25vw,4.75rem)] font-bold leading-[1.04] tracking-[-0.035em]">
                 Get missing bug context before your team has to{" "}
                 <span className="sb-inspect">ask.</span>
               </h1>
@@ -399,10 +398,10 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <a
-                  href="#pilot"
+                  href="#waitlist"
                   className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-sb-ink px-6 py-3 font-semibold text-sb-paper outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-sb-focus/60"
                 >
-                  Request a pilot
+                  Join the waitlist
                   <Arrow className="size-5 transition-transform group-hover:translate-x-0.5" />
                 </a>
                 <a
@@ -413,9 +412,8 @@ export default function Home() {
                 </a>
               </div>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-sb-soft">
-                For founders, support leads, and engineering leads evaluating a
-                controlled desktop-Chrome pilot. No self-serve account is
-                created.
+                Email is all you need. Design-partner details are optional, and
+                no self-serve account is created.
               </p>
             </div>
             <HeroEvidence />
@@ -424,11 +422,11 @@ export default function Home() {
 
         <section
           aria-labelledby="prototype-status"
-          className="border-y border-sb-line bg-sb-ink text-sb-paper"
+          className="border-y border-sb-line bg-sb-mark/10"
         >
           <div className="mx-auto grid max-w-7xl gap-6 px-5 py-7 sm:px-8 lg:grid-cols-[0.65fr_1.35fr] lg:items-center">
             <div>
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-sb-mark">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-sb-soft">
                 Product evidence
               </p>
               <h2
@@ -438,7 +436,7 @@ export default function Home() {
                 Working in the prototype today
               </h2>
             </div>
-            <ul className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm text-sb-paper/80 sm:grid-cols-4">
+            <ul className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm text-sb-soft sm:grid-cols-4">
               {[
                 "Embeddable widget",
                 "Live voice follow-ups",
@@ -607,36 +605,34 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="border-y border-sb-line bg-sb-ink text-sb-paper">
+        <section className="border-y border-sb-line bg-sb-surface">
           <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-24">
             <div className="max-w-3xl">
-              <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-mark">
-                Capture, explained plainly
-              </p>
+              <p className="sb-kicker">Capture, explained plainly</p>
               <h2 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
                 A recording and a replay are not the same thing
               </h2>
-              <p className="mt-5 text-lg leading-relaxed text-sb-paper/70">
+              <p className="mt-5 text-lg leading-relaxed text-sb-soft">
                 The distinction matters when you evaluate diagnostic value,
                 permissions, and sensitive-data risk.
               </p>
             </div>
             <div className="mt-12 grid gap-5 lg:grid-cols-2">
-              <article className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 sm:p-8">
+              <article className="rounded-2xl border border-sb-line bg-sb-paper p-6 sm:p-8">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-full bg-sb-rec font-mono text-xs text-white">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-sb-rec font-mono text-xs text-sb-surface">
                     REC
                   </span>
                   <h3 className="font-display text-2xl font-semibold">
                     Screen + audio recording
                   </h3>
                 </div>
-                <p className="mt-5 leading-relaxed text-sb-paper/70">
+                <p className="mt-5 leading-relaxed text-sb-soft">
                   A video of the pixels in the browser tab the customer chose,
                   mixed with microphone and assistant audio. It helps reviewers
                   see timing and visual state.
                 </p>
-                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-paper/80">
+                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-soft">
                   <li className="border-l-2 border-sb-mark pl-3">
                     Requires the browser’s screen and mic permission prompts.
                   </li>
@@ -649,21 +645,21 @@ export default function Home() {
                   </li>
                 </ul>
               </article>
-              <article className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 sm:p-8">
+              <article className="rounded-2xl border border-sb-line bg-sb-paper p-6 sm:p-8">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-full border border-sb-mark font-mono text-xs text-sb-mark">
+                  <span className="flex size-10 items-center justify-center rounded-full border border-sb-mark font-mono text-xs text-sb-ink">
                     DOM
                   </span>
                   <h3 className="font-display text-2xl font-semibold">
                     DOM-based replay
                   </h3>
                 </div>
-                <p className="mt-5 leading-relaxed text-sb-paper/70">
+                <p className="mt-5 leading-relaxed text-sb-soft">
                   A reconstruction from captured page events—not a second video.
                   It can make clicks and page changes easier to inspect
                   alongside the transcript.
                 </p>
-                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-paper/80">
+                <ul className="mt-6 space-y-3 text-sm leading-relaxed text-sb-soft">
                   <li className="border-l-2 border-sb-mark pl-3">
                     Masks form inputs and excludes elements marked data-private.
                   </li>
@@ -797,7 +793,7 @@ export default function Home() {
                 id="questions-heading"
                 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl"
               >
-                Details before you request a pilot
+                Details before you join
               </h2>
             </div>
             <div className="divide-y divide-sb-line border-y border-sb-line">
@@ -822,51 +818,49 @@ export default function Home() {
         </section>
 
         <section
-          id="pilot"
-          aria-labelledby="pilot-heading"
-          className="scroll-mt-24 border-t border-sb-line bg-sb-ink text-sb-paper"
+          id="waitlist"
+          aria-labelledby="waitlist-heading"
+          className="scroll-mt-24 border-t border-sb-line bg-sb-surface"
         >
           <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20 lg:py-24">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.14em] text-sb-mark">
-                Early design partners
-              </p>
+              <p className="sb-kicker">Early access</p>
               <h2
-                id="pilot-heading"
+                id="waitlist-heading"
                 className="mt-3 max-w-xl font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl"
               >
-                Help us test whether better questions create better reports
+                Join with just your email
               </h2>
-              <p className="mt-5 max-w-xl text-lg leading-relaxed text-sb-paper/70">
-                We are looking for a small number of B2B SaaS teams willing to
-                run a controlled pilot and review report quality with the
-                founders.
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-sb-soft">
+                Get an update when early access opens. If you want to explore a
+                design-partner pilot, you can optionally tell us about your team
+                and current workflow.
               </p>
-              <ul className="mt-8 space-y-3 text-sm text-sb-paper/80">
+              <ul className="mt-8 space-y-3 text-sm text-sb-soft">
                 <li className="flex gap-3">
-                  <span className="text-sb-mark">01</span> We review your
-                  current reporting workflow.
+                  <span className="font-mono text-sb-rec">01</span> Email is the
+                  only required field.
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-sb-mark">02</span> We confirm that the
-                  product area fits the safety boundary.
+                  <span className="font-mono text-sb-rec">02</span> Pilot
+                  qualification stays collapsed unless you want it.
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-sb-mark">03</span> If it fits, we scope
-                  installation and evaluation together.
+                  <span className="font-mono text-sb-rec">03</span> Joining does
+                  not create an account or promise access.
                 </li>
               </ul>
             </div>
-            <div className="rounded-2xl bg-sb-paper p-5 text-sb-ink sm:p-7">
-              <WaitlistForm buttonLabel="Request a pilot" />
+            <div className="rounded-2xl border border-sb-line bg-sb-paper p-5 text-sb-ink shadow-[0_24px_70px_-48px_rgba(17,22,43,0.55)] sm:p-7">
+              <WaitlistForm />
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-sb-ink text-sb-paper/60">
+      <footer className="border-t border-sb-line bg-sb-paper text-sb-soft">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p className="flex items-center gap-2 text-sb-paper">
+          <p className="flex items-center gap-2 text-sb-ink">
             <Mark className="size-5" />
             Showbug · showbugai.com
           </p>
@@ -874,17 +868,17 @@ export default function Home() {
             aria-label="Footer navigation"
             className="flex flex-wrap gap-x-5 gap-y-2"
           >
-            <a className="hover:text-sb-paper" href="#how-it-works">
+            <a className="hover:text-sb-ink" href="#how-it-works">
               How it works
             </a>
-            <a className="hover:text-sb-paper" href="#fit">
+            <a className="hover:text-sb-ink" href="#fit">
               Pilot fit
             </a>
-            <a className="hover:text-sb-paper" href="#questions">
+            <a className="hover:text-sb-ink" href="#questions">
               Questions
             </a>
-            <a className="hover:text-sb-paper" href="#pilot">
-              Request a pilot
+            <a className="hover:text-sb-ink" href="#waitlist">
+              Join the waitlist
             </a>
           </nav>
           <p>Pre-launch · details may change</p>

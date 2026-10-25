@@ -2,6 +2,12 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Waitlist friction, telemetry compatibility, and landing-page legibility
+- Email is now the only required waitlist field. Company, role, and workflow are optional design-partner qualification behind a collapsed disclosure. *Why:* visitors who only want launch updates should not have to apply for a pilot.
+- Restored the MongoDB `client` and `request` objects, including referral/UTM, locale, display dimensions, time-to-submit, parsed browser/OS/device, coarse Vercel location, and a salted IP hash. Raw IP addresses are not stored, and the form now discloses the passive telemetry. An email-only resubmission does not erase qualification saved previously.
+- Simplified the page surfaces, opened the hero's line height/width/tracking, removed the decorative grid, and replaced fixed inverted sections with semantic theme colors. *Why:* improve hierarchy and preserve readable contrast in both light and dark themes, following Marker.io's useful principles of concise hierarchy, whitespace, and clear product evidence without copying its branding or claims.
+- Bricolage Grotesque and Geist are both distributed under the SIL Open Font License 1.1 and are permitted for commercial web use.
+
 ## 2026-10-25 — Landing page repositioned around interactive clarification
 - Repositioned Showbug as an embeddable bug-reporting assistant for B2B web apps that asks for missing information while the customer is still reporting. *Why:* interactive clarification is the core hypothesis; “recording to ticket” is both less differentiated and too broad a promise for the current stage.
 - Primary conversion is now **Request a pilot**, with company, role, and current workflow qualification. The confirmation says a founder will review fit and does not imply instant access. *Why:* the product is pre-launch and not safe or complete enough for self-serve use.

@@ -148,7 +148,7 @@
   --sb-soft: #474e6e;
   --sb-line: #d7dae8;
   --sb-mark: #ffa63d;
-  --sb-rec: #d92d3a;
+  --sb-rec: #d32637;
   --sb-focus: #2456e6;
 }
 
@@ -187,14 +187,6 @@
 html:has(.sb-page) {
   background-color: var(--sb-paper);
   scroll-behavior: smooth;
-}
-
-.sb-grid-bg {
-  background-image:
-    linear-gradient(var(--sb-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--sb-line) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(to bottom, black 0%, transparent 94%);
 }
 
 .sb-kicker {
