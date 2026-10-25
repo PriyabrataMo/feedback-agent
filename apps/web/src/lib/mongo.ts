@@ -1,9 +1,7 @@
 import { MongoClient, type Db } from "mongodb";
+import "server-only";
 
-/**
- * One cached client per server instance. The promise lives on globalThis so dev
- * hot-reloads and serverless warm invocations reuse the same connection pool.
- */
+/** Reuse one connection pool across development reloads and warm server instances. */
 const globalForMongo = globalThis as unknown as {
   _showbugMongo?: Promise<MongoClient>;
 };
@@ -17,10 +15,9 @@ export function getDb(): Promise<Db> {
     serverSelectionTimeoutMS: 5000,
   })
     .connect()
-    .catch((err: unknown) => {
-      // Don't cache a failed connect, so the next request retries.
+    .catch((error: unknown) => {
       globalForMongo._showbugMongo = undefined;
-      throw err;
+      throw error;
     });
 
   return globalForMongo._showbugMongo.then((client) =>

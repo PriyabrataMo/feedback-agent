@@ -186,6 +186,96 @@
 /* Paint the page background behind overscroll/bounce too, not just the content box. */
 html:has(.sb-page) {
   background-color: var(--sb-paper);
+  scroll-behavior: smooth;
+}
+
+.sb-grid-bg {
+  background-image:
+    linear-gradient(var(--sb-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sb-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 94%);
+}
+
+.sb-kicker {
+  font-family: var(--font-geist-mono);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sb-soft);
+}
+
+.sb-nav-link {
+  position: relative;
+  border-radius: 0.25rem;
+  color: var(--sb-soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.sb-nav-link:hover {
+  color: var(--sb-ink);
+}
+
+.sb-nav-link:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--sb-focus) 45%, transparent);
+}
+
+.sb-nav-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -0.35rem;
+  left: 0;
+  height: 2px;
+  background: var(--sb-mark);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 180ms ease;
+}
+
+.sb-nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.sb-status {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--sb-line);
+  padding: 0.3rem 0.65rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.68rem;
+  line-height: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sb-status::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--sb-soft);
+}
+
+.sb-status-ready::before {
+  background: #2f9e67;
+}
+
+.sb-status-testing::before,
+.sb-status-building::before {
+  background: var(--sb-mark);
+}
+
+.sb-status-later::before {
+  background: var(--sb-soft);
 }
 
 /* The "bug" in the hero is drawn as a devtools-style inspector box. */
@@ -227,5 +317,11 @@ html:has(.sb-page) {
     50% {
       opacity: 0.35;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.sb-page) {
+    scroll-behavior: auto;
   }
 }

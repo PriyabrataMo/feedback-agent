@@ -24,16 +24,6 @@ export const metadata: Metadata = {
   title: { default: SITE_TITLE, template: `%s · ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  keywords: [
-    "bug reporting tool",
-    "voice bug report",
-    "screen recording bug report",
-    "user feedback widget",
-    "AI bug ticket",
-    "session replay",
-    "Jira ticket automation",
-    "Linear ticket automation",
-  ],
   category: "technology",
   alternates: { canonical: "/" },
   robots: {

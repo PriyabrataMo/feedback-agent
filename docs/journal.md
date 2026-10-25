@@ -2,6 +2,13 @@
 
 Newest entry first. Append after every meaningful discussion. Record decisions with the *why*.
 
+## 2026-10-25 — Landing page repositioned around interactive clarification
+- Repositioned Showbug as an embeddable bug-reporting assistant for B2B web apps that asks for missing information while the customer is still reporting. *Why:* interactive clarification is the core hypothesis; “recording to ticket” is both less differentiated and too broad a promise for the current stage.
+- Primary conversion is now **Request a pilot**, with company, role, and current workflow qualification. The confirmation says a founder will review fit and does not imply instant access. *Why:* the product is pre-launch and not safe or complete enough for self-serve use.
+- Public copy now separates the working prototype, adapters that still need real-customer validation, pre-pilot requirements, and unsupported functionality. It also distinguishes raw screen recording from masked DOM replay and names the OpenAI Realtime data path.
+- The pilot-request backend now lives entirely in Next.js and MongoDB; the duplicate Python waitlist route/store/tests were removed. Zod is the runtime and TypeScript schema source, because Drizzle does not support MongoDB; the user explicitly chose MongoDB + Zod over changing to a SQL database. The route stores qualification fields, rate-limits with a salted IP hash, and retains real error states. Production requires `MONGODB_URI` and `WAITLIST_IP_SALT`.
+- SEO focus is the realistic “bug reporting widget” topic, supported by “customer bug reporting” and “AI bug reporting” language in useful page copy. Updated the title, description, OG image, internal anchors, crawl directives, and noindex coverage; removed FAQ rich-result markup because Showbug is not in Google’s current health/government eligibility set.
+
 ## 2026-10-25 — Renamed the product to Showbug
 - Decision: "Feedback Agent" (a placeholder) becomes **Showbug**; domain `showbugai.com` is bought. *Why:* short and brandable, "show the bug" works as a verb, and it matches the core idea of the user showing their screen and talking through the problem.
 - Renamed: README title/status, root workspace (`showbug`) and `@showbug/sdk` (build filter), `apps/api` Python project (`showbug-api`), FastAPI title, logger names (`showbug_api*`), SDK global (`window.Showbug`) and `[showbug]` console prefixes, ticket footer ("Created automatically by Showbug"), realtime agent prompt, S3 example/test key prefix and role names (`showbug`, `ShowbugAccess`, `showbug-api`, `showbug-media`) in docs and tests, `docs/mvp-security-plan.md` title. The SDK bundle was rebuilt. No env var or storage default embedded the old name, so no fallbacks were needed.

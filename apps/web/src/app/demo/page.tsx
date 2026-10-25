@@ -3,7 +3,7 @@ import { DemoActions } from "./demo-actions";
 
 export const metadata = {
   title: "Acme Billing (Showbug demo host app)",
-  robots: { index: false },
+  robots: { index: false, follow: false, noarchive: true },
 };
 
 /** A stand-in "customer SaaS" that embeds the SDK exactly as a real customer would. */

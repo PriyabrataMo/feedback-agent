@@ -1,50 +1,13 @@
 import { createHmac } from "node:crypto";
+import "server-only";
 import { getDb } from "@/lib/mongo";
-
-/** Everything the browser tells us. Untrusted: every field is validated and truncated. */
-export type ClientTelemetry = {
-  referrer: string | null;
-  landingPath: string | null;
-  utm: Partial<
-    Record<"source" | "medium" | "campaign" | "term" | "content", string>
-  >;
-  timezone: string | null;
-  language: string | null;
-  screen: { w: number; h: number } | null;
-  viewport: { w: number; h: number } | null;
-  dpr: number | null;
-  timeToSubmitMs: number | null;
-};
-
-export type RequestInfo = {
-  userAgent: string;
-  browser: string;
-  os: string;
-  device: "mobile" | "tablet" | "desktop" | "bot" | "unknown";
-  acceptLanguage: string | null;
-  country: string | null;
-  region: string | null;
-  city: string | null;
-  ipHash: string | null;
-};
-
-export type Signup = {
-  email: string;
-  source: string;
-  client: ClientTelemetry;
-  request: RequestInfo;
-};
-
-type WaitlistDoc = Signup & {
-  emailDomain: string;
-  createdAt: Date;
-  lastSeenAt: Date;
-  submitCount: number;
-};
+import {
+  pilotRequestDocumentSchema,
+  type PilotRequestDocument,
+} from "@/lib/waitlist-schema";
 
 const RATE_PER_MINUTE = 5;
 const HIT_TTL_SECONDS = 3600;
-
 let indexesReady: Promise<void> | undefined;
 
 function ensureIndexes(): Promise<void> {
@@ -59,17 +22,23 @@ function ensureIndexes(): Promise<void> {
         db.collection("waitlist_hits").createIndex({ ipHash: 1, at: -1 }),
       ]);
     })
-    .catch((err: unknown) => {
+    .catch((error: unknown) => {
       indexesReady = undefined;
-      throw err;
+      throw error;
     });
   return indexesReady;
 }
 
-/** Salted HMAC of the IP: enough for abuse checks and unique-visitor counts, no raw IP kept. */
+/** A salted HMAC supports abuse controls without retaining the raw IP address. */
 export function hashIp(ip: string): string {
-  const salt = process.env.WAITLIST_IP_SALT ?? "dev-only-salt";
-  return createHmac("sha256", salt).update(ip).digest("hex").slice(0, 32);
+  const salt = process.env.WAITLIST_IP_SALT;
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error("WAITLIST_IP_SALT is not set");
+  }
+  return createHmac("sha256", salt ?? "dev-only-salt")
+    .update(ip)
+    .digest("hex")
+    .slice(0, 32);
 }
 
 export function clientIp(headers: Headers): string | null {
@@ -77,7 +46,6 @@ export function clientIp(headers: Headers): string | null {
   return forwarded || headers.get("x-real-ip")?.trim() || null;
 }
 
-/** Counts this attempt and reports whether the caller is over the per-minute limit. */
 export async function isRateLimited(ipHash: string | null): Promise<boolean> {
   if (!ipHash) return false;
   await ensureIndexes();
@@ -89,31 +57,51 @@ export async function isRateLimited(ipHash: string | null): Promise<boolean> {
   return false;
 }
 
-/** Inserts a new signup, or bumps `submitCount`/`lastSeenAt` if the email is already on the list. */
-export async function saveSignup(signup: Signup): Promise<void> {
+type SavePilotRequest = Pick<
+  PilotRequestDocument,
+  "email" | "company" | "role" | "workflow" | "source" | "ipHash"
+>;
+
+/** Insert a lead or update qualification details when an email-only lead returns. */
+export async function savePilotRequest(
+  request: SavePilotRequest,
+): Promise<void> {
   await ensureIndexes();
   const now = new Date();
-  const collection = (await getDb()).collection<WaitlistDoc>("waitlist");
+  const document = pilotRequestDocumentSchema.parse({
+    ...request,
+    emailDomain: request.email.split("@")[1] ?? "",
+    createdAt: now,
+    lastSeenAt: now,
+    submitCount: 1,
+  });
+  const collection = (await getDb()).collection<PilotRequestDocument>(
+    "waitlist",
+  );
   try {
     await collection.updateOne(
-      { email: signup.email },
+      { email: document.email },
       {
         $setOnInsert: {
-          email: signup.email,
-          emailDomain: signup.email.split("@")[1] ?? "",
-          source: signup.source,
-          client: signup.client,
-          request: signup.request,
-          createdAt: now,
+          email: document.email,
+          emailDomain: document.emailDomain,
+          createdAt: document.createdAt,
         },
-        $set: { lastSeenAt: now },
+        $set: {
+          company: document.company,
+          role: document.role,
+          workflow: document.workflow,
+          source: document.source,
+          ipHash: document.ipHash,
+          lastSeenAt: document.lastSeenAt,
+        },
         $inc: { submitCount: 1 },
       },
       { upsert: true },
     );
-  } catch (err) {
-    // Two simultaneous first-time submits can race on the unique index: the other one won.
-    if ((err as { code?: number }).code === 11000) return;
-    throw err;
+  } catch (error) {
+    // Simultaneous first submits can race on the unique index; one has already landed.
+    if ((error as { code?: number }).code === 11000) return;
+    throw error;
   }
 }
